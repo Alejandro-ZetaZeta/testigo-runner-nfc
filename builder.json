@@ -1,10 +1,21 @@
 {
-  "provider": "github",
   "project": "RelayBaton",
-  "iosPath": "ios",
-  "scheme": "RelayBaton",
+  "platform": "ios",
   "github": {
     "owner": "Alejandro-ZetaZeta",
     "repo": "testigo-runner-nfc"
-  }
+  },
+  "provider": "github",
+  "codemagic": {},
+  "bitrise": {},
+  "ios": {
+    "path": "ios",
+    "scheme": "RelayBaton"
+  },
+  "flutter": {
+    "watch": {}
+  },
+  "reactNative": {},
+  "kmp": {},
+  "mobai": {}
 }
