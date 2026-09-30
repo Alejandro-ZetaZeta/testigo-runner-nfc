@@ -22,7 +22,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
@@ -35,6 +34,7 @@ import com.example.sensores_prueba1.data.model.BatonData
 import com.example.sensores_prueba1.nfc.BatonManager
 import com.example.sensores_prueba1.nfc.HandoffEvent
 import com.example.sensores_prueba1.nfc.RelayBatonReader
+import com.example.sensores_prueba1.sensors.GpsTracker
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -53,13 +53,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     companion object {
         private const val TAG = "MainActivity"
-        private const val STRIDE_LENGTH_METERS = 0.76f
-        private const val CADENCE_WINDOW_MS = 6000L
-        private const val INACTIVITY_CADENCE_TIMEOUT_MS = 3500L
     }
 
-    // Controlador del Lector NFC
+    // Controlador del Lector NFC y GPS
     private lateinit var relayBatonReader: RelayBatonReader
+    private lateinit var gpsTracker: GpsTracker
     private var isNfcReaderManualScanning = false
 
     // Gestión de Sensores
@@ -68,17 +66,18 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var stepCounterSensor: Sensor? = null
     private var accelerometerSensor: Sensor? = null
 
-    // Estado de Telemetría y Calibración
+    // Estado de Telemetría Dinámica y Calibración
     private var totalSteps = 0
     private var initialStepCounterValue = -1
-    private val stepTimestamps = mutableListOf<Long>()
     private var lastAccelerometerStepTime = 0L
     private var lastStepDetectedTime = 0L
-    private var lastAccMagnitude = SensorManager.GRAVITY_EARTH
+    private var accumulatedIndoorDistanceMeters = 0f
+    private var smoothedCadence = 0f
     private val accelFilterAlpha = 0.82f
     private var filteredAccel = SensorManager.GRAVITY_EARTH
 
     // Variables de Calibración
+    private var lastAccMagnitude = SensorManager.GRAVITY_EARTH
     private var baselineGravity = SensorManager.GRAVITY_EARTH
     private var sensorNoiseThreshold = 0.5f
     private var isCalibrated = false
@@ -129,15 +128,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private var pulseAnimation: Animation? = null
 
-    // Lanzador de Permisos para Reconocimiento de Actividad
-    private val requestPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        if (isGranted) {
-            registerSensors()
-        } else {
-            Log.w(TAG, "Permiso ACTIVITY_RECOGNITION denegado. Se usará acelerómetro como respaldo.")
-            registerSensors()
+    // Lanzador de Permisos (Actividad Física + Ubicación GPS)
+    private val requestPermissionsLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        registerSensors()
+        val hasGps = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        if (hasGps && timerState == TimerState.RUNNING) {
+            gpsTracker.startTracking()
         }
     }
 
@@ -216,20 +215,26 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         stepDetectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
         stepCounterSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
         accelerometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        gpsTracker = GpsTracker(this)
     }
 
     private fun checkPermissionsAndStartSensors() {
+        val permissionsToRequest = mutableListOf<String>()
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.ACTIVITY_RECOGNITION
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                requestPermissionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
-                return
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(Manifest.permission.ACTIVITY_RECOGNITION)
             }
         }
-        registerSensors()
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+
+        if (permissionsToRequest.isNotEmpty()) {
+            requestPermissionsLauncher.launch(permissionsToRequest.toTypedArray())
+        } else {
+            registerSensors()
+        }
     }
 
     private fun registerSensors() {
@@ -248,7 +253,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
 
         val statusStr = when {
-            isCalibrated -> "● Calibrado y Activo"
+            isCalibrated -> "● Calibrado (GPS + Inercial)"
             registered -> "● Sensores Activos"
             else -> "● En Espera"
         }
@@ -263,6 +268,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun unregisterSensors() {
         sensorManager.unregisterListener(this)
+        gpsTracker.stopTracking()
     }
 
     private fun setupClickListeners() {
@@ -281,7 +287,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             when (timerState) {
                 TimerState.STOPPED, TimerState.PAUSED -> {
                     if (!isCalibrated) {
-                        // Notificar sugerencia de calibración sutilmente si es la primera vez
                         Toast.makeText(this, "💡 Consejo: Calibra con el icono superior para mayor precisión", Toast.LENGTH_SHORT).show()
                     }
                     startRaceTimer()
@@ -438,7 +443,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
                     // Resetear contadores espurios
                     initialStepCounterValue = -1
-                    stepTimestamps.clear()
+                    smoothedCadence = 0f
+                    lastStepDetectedTime = 0L
 
                     tvCountdown.text = "✅ ¡Calibración exitosa!"
                     tvTelemetry.text = String.format(
@@ -471,7 +477,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun observeBatonState() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                // Observar Estado de Portación
                 launch {
                     BatonManager.isCarryingBaton.collect { isCarrying ->
                         updateCarryingBatonUI(isCarrying)
@@ -479,14 +484,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     }
                 }
 
-                // Observar Datos del Testigo
                 launch {
                     BatonManager.currentBaton.collect { baton ->
                         updateBatonDetailsUI(baton)
                     }
                 }
 
-                // Observar Eventos de Traspaso
                 launch {
                     BatonManager.handoffEvents.collect { event ->
                         handleHandoffEvent(event)
@@ -548,14 +551,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun handleNfcModeForBatonState(isCarrying: Boolean) {
         if (!isCarrying) {
-            // Habilitar modo lector automáticamente al esperar el testigo
             relayBatonReader.startScanning()
             isNfcReaderManualScanning = true
             btnToggleNfcScan.text = "Lector NFC: Activo (Toca para detener)"
             btnToggleNfcScan.strokeColor = ContextCompat.getColorStateList(this, R.color.accent_amber)
             btnToggleNfcScan.setTextColor(ContextCompat.getColor(this, R.color.accent_amber))
         } else {
-            // Portando el testigo - el servicio HCE responde a lectores entrantes
             if (isNfcReaderManualScanning) {
                 relayBatonReader.stopScanning()
                 isNfcReaderManualScanning = false
@@ -618,7 +619,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val isCarrying = BatonManager.isCarryingBaton.value
 
         if (isCarrying && current != null) {
-            // Simular entrega de testigo
             val nextLeg = current.legIndex + 1
             val updatedBaton = current.copy(
                 legIndex = nextLeg,
@@ -630,7 +630,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             BatonManager.updateBaton(updatedBaton, carrying = false)
             Toast.makeText(this, "¡Testigo pasado al Corredor $nextLeg!", Toast.LENGTH_SHORT).show()
         } else if (current != null) {
-            // Simular recepción de testigo
             val updatedBaton = current.copy(
                 timestampMs = System.currentTimeMillis()
             )
@@ -654,13 +653,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         btnStartPause.setIconResource(R.drawable.ic_pause)
         btnStartPause.backgroundTintList = ContextCompat.getColorStateList(this, R.color.accent_amber)
 
+        gpsTracker.startTracking()
+
         timerJob?.cancel()
         timerJob = lifecycleScope.launch {
             while (isActive && timerState == TimerState.RUNNING) {
                 val currentElapsed = accumulatedTimeMs + (SystemClock.elapsedRealtime() - timerStartTime)
                 updateTimerDisplay(currentElapsed)
                 updateCadenceAndTelemetry()
-                delay(30) // ~33 FPS para fluidez
+                delay(40) // 25 FPS fluido
             }
         }
     }
@@ -670,6 +671,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         timerState = TimerState.PAUSED
         accumulatedTimeMs += SystemClock.elapsedRealtime() - timerStartTime
         timerJob?.cancel()
+
+        gpsTracker.stopTracking()
 
         tvTimerStatus.text = "PAUSADO"
         tvTimerStatus.setTextColor(ContextCompat.getColor(this, R.color.accent_amber))
@@ -688,8 +691,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         totalSteps = 0
         initialStepCounterValue = -1
-        stepTimestamps.clear()
+        accumulatedIndoorDistanceMeters = 0f
+        smoothedCadence = 0f
         lastStepDetectedTime = 0L
+        gpsTracker.reset()
 
         tvTimerStatus.text = "LISTO"
         tvTimerStatus.setTextColor(ContextCompat.getColor(this, R.color.accent_cyan))
@@ -710,7 +715,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     // ==========================================
-    // SENSORES Y TELEMETRÍA
+    // SENSORES Y TELEMETRÍA DINÁMICA
     // ==========================================
 
     override fun onSensorChanged(event: SensorEvent?) {
@@ -747,9 +752,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     val delta = magnitude - filteredAccel
                     val now = System.currentTimeMillis()
 
-                    // Umbral calibrado de paso por acelerómetro
-                    val triggerThreshold = maxOf(2.5f, sensorNoiseThreshold + 1.8f)
-                    if (delta > triggerThreshold && (now - lastAccelerometerStepTime) > 260) {
+                    val triggerThreshold = maxOf(2.2f, sensorNoiseThreshold + 1.6f)
+                    if (delta > triggerThreshold && (now - lastAccelerometerStepTime) > 240) {
                         lastAccelerometerStepTime = now
                         if (stepDetectorSensor == null) {
                             onStepDetected()
@@ -766,47 +770,103 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun onStepDetected() {
         if (timerState != TimerState.RUNNING) return
-        totalSteps++
+
         val now = System.currentTimeMillis()
-        lastStepDetectedTime = now
-        synchronized(stepTimestamps) {
-            stepTimestamps.add(now)
-            stepTimestamps.removeAll { now - it > CADENCE_WINDOW_MS }
+        val dt = now - lastStepDetectedTime
+
+        // Filtro anti-rebote espurio (< 230 ms = > 260 SPM no realista)
+        if (dt < 230L && lastStepDetectedTime != 0L) return
+
+        totalSteps++
+
+        // Estimación de Cadencia (PPM) con suavizado EMA
+        if (dt in 230L..2500L) {
+            val instantSpm = (60_000f / dt).coerceIn(40f, 240f)
+            smoothedCadence = if (smoothedCadence <= 5f) {
+                instantSpm
+            } else {
+                0.60f * smoothedCadence + 0.40f * instantSpm
+            }
+        } else if (lastStepDetectedTime == 0L) {
+            smoothedCadence = 120f
         }
+        lastStepDetectedTime = now
+
+        // Longitud de zancada dinámica según intensidad del trote/carrera y espacio
+        val dynamicAccel = abs(lastAccMagnitude - baselineGravity)
+        val stepStride = calculateDynamicStride(smoothedCadence, dynamicAccel)
+        accumulatedIndoorDistanceMeters += stepStride
+
         updateCadenceAndTelemetry()
+    }
+
+    /**
+     * Calcula la longitud de zancada dinámica (m) según cadencia e intensidad del movimiento.
+     * Si se corre en un espacio pequeño o en el sitio, evita acumular 50m falsos.
+     */
+    private fun calculateDynamicStride(cadence: Float, dynamicAccel: Float): Float {
+        return when {
+            cadence < 95f -> {
+                // Pasos lentos / desplazamiento mínimo en reposo
+                0.28f + (dynamicAccel * 0.04f).coerceIn(0f, 0.12f)
+            }
+            cadence in 95f..130f -> {
+                // Trote suave / trote en el sitio en espacios reducidos / caminata
+                0.38f + (dynamicAccel * 0.06f).coerceIn(0f, 0.18f)
+            }
+            cadence in 130f..165f -> {
+                // Trote en carrera activa
+                0.55f + (dynamicAccel * 0.08f).coerceIn(0f, 0.22f)
+            }
+            else -> {
+                // Sprint a máxima velocidad
+                0.75f + (dynamicAccel * 0.10f).coerceIn(0f, 0.30f)
+            }
+        }.coerceIn(0.20f, 1.20f)
     }
 
     private fun updateCadenceAndTelemetry() {
         val now = System.currentTimeMillis()
-        var currentCadence = 0
 
-        // Si ha pasado más del tiempo de inactividad sin pasos, decae la cadencia a 0
-        if (now - lastStepDetectedTime > INACTIVITY_CADENCE_TIMEOUT_MS) {
-            synchronized(stepTimestamps) {
-                stepTimestamps.clear()
+        // Decaimiento suave si no hay nuevos pasos
+        val timeSinceLastStep = now - lastStepDetectedTime
+        if (lastStepDetectedTime > 0L) {
+            if (timeSinceLastStep > 2400L) {
+                smoothedCadence *= 0.70f
+                if (smoothedCadence < 25f) smoothedCadence = 0f
+            }
+            if (timeSinceLastStep > 3500L) {
+                smoothedCadence = 0f
             }
         } else {
-            synchronized(stepTimestamps) {
-                stepTimestamps.removeAll { now - it > CADENCE_WINDOW_MS }
-                if (stepTimestamps.size >= 2) {
-                    val spanMs = stepTimestamps.last() - stepTimestamps.first()
-                    if (spanMs > 400) {
-                        val spm = (stepTimestamps.size - 1) * 60000.0 / spanMs
-                        currentCadence = spm.toInt().coerceIn(0, 260)
-                    }
-                }
-            }
+            smoothedCadence = 0f
         }
 
-        val distance = totalSteps * STRIDE_LENGTH_METERS
-        val speedMps = (currentCadence / 60.0f) * STRIDE_LENGTH_METERS
-        val paceMinPerKm = if (speedMps > 0.5f) {
+        val currentCadenceInt = smoothedCadence.toInt()
+
+        // Si hay fijación GPS con alta precisión exterior (>3m acumulados), usa GPS real; si no, usa zancada adaptativa interior
+        val gpsData = gpsTracker.gpsFlow.value
+        val finalDistance = if (gpsData.isGpsFixed && gpsData.totalDistanceMeters > 3.0f) {
+            gpsData.totalDistanceMeters
+        } else {
+            accumulatedIndoorDistanceMeters
+        }
+
+        // Velocidad estimada en m/s
+        val currentStride = calculateDynamicStride(smoothedCadence, abs(lastAccMagnitude - baselineGravity))
+        val speedMps = if (gpsData.isGpsFixed && gpsData.speedMps > 0.4f) {
+            gpsData.speedMps
+        } else {
+            (smoothedCadence / 60.0f) * currentStride
+        }
+
+        val paceMinPerKm = if (speedMps > 0.45f) {
             (1000f / speedMps) / 60f
         } else {
             0f
         }
 
-        updateMetricsUI(currentCadence, distance, paceMinPerKm, totalSteps)
+        updateMetricsUI(currentCadenceInt, finalDistance, paceMinPerKm, totalSteps)
     }
 
     private fun updateMetricsUI(cadence: Int, distanceMeters: Float, paceMinutesPerKm: Float, steps: Int) {
