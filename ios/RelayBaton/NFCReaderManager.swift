@@ -60,7 +60,7 @@ class NFCReaderManager: NSObject, ObservableObject, NFCTagReaderSessionDelegate 
         self.onError = onError
 
         session = NFCTagReaderSession(
-            pollingOption: [.iso14443],
+            pollingOption: .iso14443,
             delegate: self,
             queue: DispatchQueue.global(qos: .userInitiated)
         )
@@ -89,13 +89,12 @@ class NFCReaderManager: NSObject, ObservableObject, NFCTagReaderSessionDelegate 
     func tagReaderSession(_ session: NFCTagReaderSession, didInvalidateWithError error: Error) {
         DispatchQueue.main.async {
             self.isScanning = false
-            let nfcError = error as? NFCReaderError
-            if nfcError?.code != .readerSessionInvalidationErrorUserCanceled {
+            if let nfcError = error as? NFCReaderError, nfcError.code == .readerSessionInvalidationErrorUserCanceled {
+                self.lastStatus = "Sesión cancelada por el usuario."
+            } else {
                 self.lastError = error.localizedDescription
                 self.lastStatus = "Sesión finalizada: \(error.localizedDescription)"
                 self.onError?(error.localizedDescription)
-            } else {
-                self.lastStatus = "Sesión cancelada por el usuario."
             }
         }
     }
@@ -137,7 +136,7 @@ class NFCReaderManager: NSObject, ObservableObject, NFCTagReaderSessionDelegate 
             p1Parameter: 0x04,
             p2Parameter: 0x00,
             data: aidData,
-            expectedResponseBodyLength: -1
+            expectedResponseLength: -1
         ) else {
             session.invalidate(errorMessage: "Error al construir APDU SELECT AID.")
             return
@@ -186,7 +185,7 @@ class NFCReaderManager: NSObject, ObservableObject, NFCTagReaderSessionDelegate 
             p1Parameter: 0x00,
             p2Parameter: 0x00,
             data: payloadData,
-            expectedResponseBodyLength: -1
+            expectedResponseLength: -1
         ) else {
             session.invalidate(errorMessage: "Error al construir APDU PASS_BATON.")
             return
@@ -229,7 +228,7 @@ class NFCReaderManager: NSObject, ObservableObject, NFCTagReaderSessionDelegate 
             p1Parameter: 0x00,
             p2Parameter: 0x00,
             data: Data(),
-            expectedResponseBodyLength: -1
+            expectedResponseLength: -1
         ) else {
             session.invalidate(errorMessage: "Error al construir APDU GET_BATON.")
             return

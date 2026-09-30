@@ -447,7 +447,9 @@ struct ContentView: View {
             motionManager.startTracking()
             locationManager.startTracking()
             timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
-                elapsedTime += 0.05
+                DispatchQueue.main.async {
+                    self.elapsedTime += 0.05
+                }
             }
         }
     }

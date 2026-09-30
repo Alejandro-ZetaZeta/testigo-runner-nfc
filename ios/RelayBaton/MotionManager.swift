@@ -103,7 +103,7 @@ class MotionManager: ObservableObject {
         guard motionManager.isDeviceMotionAvailable else {
             if motionManager.isAccelerometerAvailable {
                 motionManager.accelerometerUpdateInterval = 0.05 // 20 Hz
-                motionManager.startAccelerometerUpdates(to: .main) { [weak self] (data, error) in
+                motionManager.startAccelerometerUpdates(to: OperationQueue.main) { [weak self] (data, error) in
                     guard let self = self, let data = data else { return }
                     let mag = sqrt(pow(data.acceleration.x, 2) + pow(data.acceleration.y, 2) + pow(data.acceleration.z, 2))
                     self.processAcceleration(magnitude: mag, userY: data.acceleration.y)
@@ -113,7 +113,7 @@ class MotionManager: ObservableObject {
         }
 
         motionManager.deviceMotionUpdateInterval = 0.05 // 20 Hz
-        motionManager.startDeviceMotionUpdates(using: .xArbitraryZVertical, to: .main) { [weak self] (motion, error) in
+        motionManager.startDeviceMotionUpdates(using: .xArbitraryZVertical, to: OperationQueue.main) { [weak self] (motion, error) in
             guard let self = self, let motion = motion else { return }
 
             let userAccel = motion.userAcceleration
