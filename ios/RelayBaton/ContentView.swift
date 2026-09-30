@@ -313,7 +313,23 @@ struct ContentView: View {
                     y: 4
                 )
             }
-            .disabled(nfcManager.isScanning)
+            // Botón Manual / Simulado de Traspaso (Útil para pruebas sin certificado de pago)
+            Button(action: triggerManualHandoff) {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                    Text("PASAR TESTIGO / AVANZAR ETAPA (MANUAL)")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(Color.yellow.opacity(0.12))
+                .foregroundColor(.yellow)
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.yellow.opacity(0.35), lineWidth: 1)
+                )
+            }
 
             // Mensaje de Estado
             Text(batonManager.statusMessage)
@@ -440,6 +456,22 @@ struct ContentView: View {
                 batonManager.onHandshakeFailed(reason: errorStr)
             }
         )
+    }
+
+    private func triggerManualHandoff() {
+        if batonManager.isCarryingBaton {
+            batonManager.onBatonTransferredOut(info: "Traspaso manual")
+            triggerHapticClick()
+        } else {
+            batonManager.prepareNextLeg()
+            triggerHapticClick()
+        }
+    }
+
+    private func triggerHapticClick() {
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.prepare()
+        generator.impactOccurred()
     }
 
     private func setupHandoffHandlers() {
