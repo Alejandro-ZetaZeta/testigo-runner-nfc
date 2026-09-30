@@ -130,17 +130,14 @@ class NFCReaderManager: NSObject, ObservableObject, NFCTagReaderSessionDelegate 
     private func performApduExchange(session: NFCTagReaderSession, tag: NFCISO7816Tag) {
         // Paso 1: SELECT AID APDU explícito (00 A4 04 00 08 F072656C61793031 00)
         let aidData = Data(Self.relayAidBytes)
-        guard let selectApdu = NFCISO7816APDU(
+        let selectApdu = NFCISO7816APDU(
             instructionClass: 0x00,
             instructionCode: 0xA4,
             p1Parameter: 0x04,
             p2Parameter: 0x00,
             data: aidData,
             expectedResponseLength: -1
-        ) else {
-            session.invalidate(errorMessage: "Error al construir APDU SELECT AID.")
-            return
-        }
+        )
 
         tag.sendCommand(apdu: selectApdu) { [weak self] (responseData: Data, sw1: UInt8, sw2: UInt8, error: Error?) in
             guard let self = self else { return }
@@ -179,17 +176,14 @@ class NFCReaderManager: NSObject, ObservableObject, NFCTagReaderSessionDelegate 
             return
         }
 
-        guard let passApdu = NFCISO7816APDU(
+        let passApdu = NFCISO7816APDU(
             instructionClass: Self.CLA_PROPRIETARY,
             instructionCode: Self.INS_PASS_BATON,
             p1Parameter: 0x00,
             p2Parameter: 0x00,
             data: payloadData,
             expectedResponseLength: -1
-        ) else {
-            session.invalidate(errorMessage: "Error al construir APDU PASS_BATON.")
-            return
-        }
+        )
 
         tag.sendCommand(apdu: passApdu) { [weak self] (responseData: Data, sw1: UInt8, sw2: UInt8, error: Error?) in
             guard let self = self else { return }
@@ -222,17 +216,14 @@ class NFCReaderManager: NSObject, ObservableObject, NFCTagReaderSessionDelegate 
 
     /// Obtiene el testigo del corredor entrante (Comando: 80 10 00 00 00).
     private func executeGetBaton(session: NFCTagReaderSession, tag: NFCISO7816Tag) {
-        guard let getApdu = NFCISO7816APDU(
+        let getApdu = NFCISO7816APDU(
             instructionClass: Self.CLA_PROPRIETARY,
             instructionCode: Self.INS_GET_BATON,
             p1Parameter: 0x00,
             p2Parameter: 0x00,
             data: Data(),
             expectedResponseLength: -1
-        ) else {
-            session.invalidate(errorMessage: "Error al construir APDU GET_BATON.")
-            return
-        }
+        )
 
         tag.sendCommand(apdu: getApdu) { [weak self] (responseData: Data, sw1: UInt8, sw2: UInt8, error: Error?) in
             guard let self = self else { return }
