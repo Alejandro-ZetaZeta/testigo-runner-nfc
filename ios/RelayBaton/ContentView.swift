@@ -289,9 +289,9 @@ struct ContentView: View {
                         .font(.system(size: 28))
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(batonManager.isCarryingBaton ? "PASAR TESTIGO (TOCAR NFC)" : "RECIBIR TESTIGO (TOCAR NFC)")
+                        Text(batonManager.isCarryingBaton ? "PASAR TESTIGO (TOCAR / RELEVO)" : "RECIBIR TESTIGO (TOCAR / RELEVO)")
                             .font(.system(size: 15, weight: .black, design: .rounded))
-                        Text("AID ISO 7816: F072656C61793031")
+                        Text(nfcManager.isNfcSupported ? "AID ISO 7816: F072656C61793031" : "Traspaso Directo / Tap (Modo Sideload)")
                             .font(.system(size: 9, weight: .bold, design: .monospaced))
                             .opacity(0.8)
                     }
@@ -443,19 +443,24 @@ struct ContentView: View {
     // MARK: - Lógica y Acciones
 
     private func triggerNfcHandoff() {
-        nfcManager.beginHandoffSession(
-            isCarrying: batonManager.isCarryingBaton,
-            baton: batonManager.currentBaton,
-            onReceived: { incoming in
-                batonManager.onBatonReceivedIn(incomingBaton: incoming)
-            },
-            onPassed: { passed in
-                batonManager.onBatonTransferredOut()
-            },
-            onError: { errorStr in
-                batonManager.onHandshakeFailed(reason: errorStr)
-            }
-        )
+        if nfcManager.isNfcSupported {
+            nfcManager.beginHandoffSession(
+                isCarrying: batonManager.isCarryingBaton,
+                baton: batonManager.currentBaton,
+                onReceived: { incoming in
+                    batonManager.onBatonReceivedIn(incomingBaton: incoming)
+                },
+                onPassed: { passed in
+                    batonManager.onBatonTransferredOut()
+                },
+                onError: { errorStr in
+                    batonManager.onHandshakeFailed(reason: errorStr)
+                }
+            )
+        } else {
+            // Sideload con cuenta gratuita: ejecutar traspaso directo de inmediato
+            triggerManualHandoff()
+        }
     }
 
     private func triggerManualHandoff() {
