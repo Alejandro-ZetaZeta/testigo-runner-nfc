@@ -48,9 +48,9 @@
 
                         <!-- Icono y Título -->
                         <ImageView
-                            android:layout_width="22dp"
-                            android:layout_height="22dp"
-                            android:layout_marginEnd="8dp"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_marginEnd="6dp"
                             android:src="@drawable/ic_baton"
                             app:tint="@color/accent_cyan" />
 
@@ -58,8 +58,8 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:letterSpacing="0.08"
-                            android:text="HUD CARRERA DE RELEVOS"
+                            android:letterSpacing="0.06"
+                            android:text="HUD RELEVOS"
                             android:textColor="@color/accent_cyan"
                             android:textSize="13sp"
                             android:textStyle="bold" />
@@ -69,12 +69,56 @@
                             android:id="@+id/tvLegBadge"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginEnd="8dp"
                             android:background="@drawable/bg_badge_leg"
                             android:letterSpacing="0.05"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="4dp"
                             android:text="ETAPA 1"
                             android:textColor="@color/accent_cyan"
-                            android:textSize="12sp"
+                            android:textSize="11sp"
                             android:textStyle="bold" />
+
+                        <!-- Botón Calibrar Sensores -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnCalibrateHeader"
+                            style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:layout_marginEnd="4dp"
+                            android:backgroundTint="#26FFFFFF"
+                            android:contentDescription="Calibrar Sensores"
+                            android:insetLeft="0dp"
+                            android:insetTop="0dp"
+                            android:insetRight="0dp"
+                            android:insetBottom="0dp"
+                            android:padding="0dp"
+                            app:cornerRadius="18dp"
+                            app:icon="@drawable/ic_calibrate"
+                            app:iconGravity="textStart"
+                            app:iconPadding="0dp"
+                            app:iconSize="18dp"
+                            app:iconTint="@color/accent_amber" />
+
+                        <!-- Botón Configuración de Carrera -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSettingsHeader"
+                            style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:backgroundTint="#26FFFFFF"
+                            android:contentDescription="Configuración de Carrera"
+                            android:insetLeft="0dp"
+                            android:insetTop="0dp"
+                            android:insetRight="0dp"
+                            android:insetBottom="0dp"
+                            android:padding="0dp"
+                            app:cornerRadius="18dp"
+                            app:icon="@drawable/ic_settings"
+                            app:iconGravity="textStart"
+                            app:iconPadding="0dp"
+                            app:iconSize="18dp"
+                            app:iconTint="@color/white" />
                     </LinearLayout>
 
                     <View

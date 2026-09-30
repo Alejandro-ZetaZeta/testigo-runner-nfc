@@ -3,8 +3,8 @@ import CoreMotion
 import Combine
 import UIKit
 
-/// Gestiona los sensores de CoreMotion (CMMotionManager y CMPedometer) para el seguimiento de cadencia
-/// y el reconocimiento del gesto de traspaso del testigo durante la carrera de relevos.
+/// Gestiona los sensores de CoreMotion (CMMotionManager y CMPedometer) para el seguimiento de cadencia,
+/// calibración de ruido base y el reconocimiento del gesto de traspaso del testigo.
 class MotionManager: ObservableObject {
     private let motionManager = CMMotionManager()
     private let pedometer = CMPedometer()
@@ -14,13 +14,17 @@ class MotionManager: ObservableObject {
     @Published var accelerationMagnitude: Double = 0.0
     @Published var handoffGestureDetected: Bool = false
     @Published var isTracking: Bool = false
+    @Published var isCalibrated: Bool = false
+    @Published var isCalibrating: Bool = false
+    @Published var calibrationProgress: Double = 0.0
     @Published var motionStatus: String = "Inmóvil"
 
-    // Umbrales de detección de gestos
-    private let handoffThreshold: Double = 2.2 // Umbral de fuerza G para extensión hacia adelante
+    // Umbrales calibrados
+    private var handoffThreshold: Double = 2.2 // Umbral de fuerza G para extensión
+    private var baselineNoise: Double = 0.15
+    private var baselineGravity: Double = 1.0 // 1G
     private var lastGestureTime: Date = Date.distantPast
     private var sessionStartDate: Date?
-    private var stepCountOffset: Int = 0
 
     // Respaldo de cadencia basado en acelerómetro
     private var accelReadings: [Double] = []
@@ -67,6 +71,49 @@ class MotionManager: ObservableObject {
         sessionStartDate = Date()
         stepIntervals.removeAll()
         accelReadings.removeAll()
+    }
+
+    /// Calibra los sensores midiendo el ruido basal en reposo durante 3 segundos.
+    func calibrateSensors(completion: @escaping (Bool) -> Void) {
+        guard !isCalibrating else { return }
+        isCalibrating = true
+        calibrationProgress = 0.0
+
+        var samples: [Double] = []
+        let totalSamples = 30
+        var currentSample = 0
+
+        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] timer in
+            guard let self = self else {
+                timer.invalidate()
+                return
+            }
+
+            currentSample += 1
+            self.calibrationProgress = Double(currentSample) / Double(totalSamples)
+
+            samples.append(self.accelerationMagnitude)
+
+            if currentSample >= totalSamples {
+                timer.invalidate()
+
+                let avg = samples.isEmpty ? 1.0 : (samples.reduce(0, +) / Double(samples.count))
+                let variance = samples.map { pow($0 - avg, 2) }.reduce(0, +) / Double(max(1, samples.count))
+                let stdDev = sqrt(variance)
+
+                self.baselineGravity = avg
+                self.baselineNoise = max(0.12, stdDev * 2.0)
+                self.handoffThreshold = max(2.0, self.baselineNoise + 1.8)
+                self.isCalibrated = true
+                self.isCalibrating = false
+                self.resetMetrics()
+
+                let generator = UINotificationFeedbackGenerator()
+                generator.notificationOccurred(.success)
+
+                completion(true)
+            }
+        }
     }
 
     // MARK: - CoreMotion Podómetro
@@ -138,13 +185,14 @@ class MotionManager: ObservableObject {
             }
         }
 
-        if !CMPedometer.isStepCountingAvailable() {
+        if !CMPedometer.isStepCountingAvailable() && isTracking {
             detectFallbackStep(magnitude: magnitude, timestamp: now)
         }
     }
 
     private func detectFallbackStep(magnitude: Double, timestamp: Date) {
-        if magnitude > 1.35 {
+        let stepThreshold = isCalibrated ? (baselineNoise + 0.35) : 1.35
+        if magnitude > stepThreshold {
             if let lastTime = lastPeakTime {
                 let delta = timestamp.timeIntervalSince(lastTime)
                 if delta > 0.25 && delta < 1.2 {

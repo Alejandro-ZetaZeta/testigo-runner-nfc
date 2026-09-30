@@ -14,6 +14,7 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.util.Log
+import android.view.LayoutInflater
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import android.widget.ImageView
@@ -21,9 +22,11 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -34,11 +37,16 @@ import com.example.sensores_prueba1.nfc.HandoffEvent
 import com.example.sensores_prueba1.nfc.RelayBatonReader
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.materialswitch.MaterialSwitch
+import com.google.android.material.progressindicator.CircularProgressIndicator
+import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlin.math.abs
 import kotlin.math.sqrt
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
@@ -47,6 +55,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         private const val TAG = "MainActivity"
         private const val STRIDE_LENGTH_METERS = 0.76f
         private const val CADENCE_WINDOW_MS = 6000L
+        private const val INACTIVITY_CADENCE_TIMEOUT_MS = 3500L
     }
 
     // Controlador del Lector NFC
@@ -59,14 +68,21 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var stepCounterSensor: Sensor? = null
     private var accelerometerSensor: Sensor? = null
 
-    // Estado de Telemetría
+    // Estado de Telemetría y Calibración
     private var totalSteps = 0
     private var initialStepCounterValue = -1
     private val stepTimestamps = mutableListOf<Long>()
     private var lastAccelerometerStepTime = 0L
+    private var lastStepDetectedTime = 0L
     private var lastAccMagnitude = SensorManager.GRAVITY_EARTH
-    private val accelFilterAlpha = 0.8f
+    private val accelFilterAlpha = 0.82f
     private var filteredAccel = SensorManager.GRAVITY_EARTH
+
+    // Variables de Calibración
+    private var baselineGravity = SensorManager.GRAVITY_EARTH
+    private var sensorNoiseThreshold = 0.5f
+    private var isCalibrated = false
+    private var isCalibrating = false
 
     // Estado del Cronómetro de Carrera
     private enum class TimerState { STOPPED, RUNNING, PAUSED }
@@ -80,6 +96,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var tvTeamName: TextView
     private lateinit var tvLegBadge: TextView
     private lateinit var tvRunnerName: TextView
+    private lateinit var btnSettingsHeader: MaterialButton
+    private lateinit var btnCalibrateHeader: MaterialButton
 
     private lateinit var tvTimerMain: TextView
     private lateinit var tvTimerStatus: TextView
@@ -128,6 +146,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
 
+        // Forzar iconos claros (blancos) en la barra de estado y de navegación sobre el fondo oscuro
+        val insetsController = WindowCompat.getInsetsController(window, window.decorView)
+        insetsController.isAppearanceLightStatusBars = false
+        insetsController.isAppearanceLightNavigationBars = false
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
@@ -148,6 +171,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         tvTeamName = findViewById(R.id.tvTeamName)
         tvLegBadge = findViewById(R.id.tvLegBadge)
         tvRunnerName = findViewById(R.id.tvRunnerName)
+        btnSettingsHeader = findViewById(R.id.btnSettingsHeader)
+        btnCalibrateHeader = findViewById(R.id.btnCalibrateHeader)
 
         tvTimerMain = findViewById(R.id.tvTimerMain)
         tvTimerStatus = findViewById(R.id.tvTimerStatus)
@@ -222,7 +247,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             registered = true
         }
 
-        tvSensorStatus.text = if (registered) "● Sensores Activos" else "● En Espera"
+        val statusStr = when {
+            isCalibrated -> "● Calibrado y Activo"
+            registered -> "● Sensores Activos"
+            else -> "● En Espera"
+        }
+        tvSensorStatus.text = statusStr
         tvSensorStatus.setTextColor(
             ContextCompat.getColor(
                 this,
@@ -236,10 +266,26 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun setupClickListeners() {
+        btnSettingsHeader.setOnClickListener {
+            performTactileClick()
+            showRaceSettingsDialog()
+        }
+
+        btnCalibrateHeader.setOnClickListener {
+            performTactileClick()
+            showSensorCalibrationDialog()
+        }
+
         btnStartPause.setOnClickListener {
             performTactileClick()
             when (timerState) {
-                TimerState.STOPPED, TimerState.PAUSED -> startRaceTimer()
+                TimerState.STOPPED, TimerState.PAUSED -> {
+                    if (!isCalibrated) {
+                        // Notificar sugerencia de calibración sutilmente si es la primera vez
+                        Toast.makeText(this, "💡 Consejo: Calibra con el icono superior para mayor precisión", Toast.LENGTH_SHORT).show()
+                    }
+                    startRaceTimer()
+                }
                 TimerState.RUNNING -> pauseRaceTimer()
             }
         }
@@ -259,6 +305,168 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             toggleManualNfcScanning()
         }
     }
+
+    // ==========================================
+    // DIÁLOGOS DE CONFIGURACIÓN Y CALIBRACIÓN
+    // ==========================================
+
+    private fun showRaceSettingsDialog() {
+        val currentBaton = BatonManager.currentBaton.value
+        val isCarrying = BatonManager.isCarryingBaton.value
+
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_race_settings, null)
+        val etRunnerName = dialogView.findViewById<TextInputEditText>(R.id.etRunnerName)
+        val etTeamId = dialogView.findViewById<TextInputEditText>(R.id.etTeamId)
+        val etRaceId = dialogView.findViewById<TextInputEditText>(R.id.etRaceId)
+        val tvLegIndexValue = dialogView.findViewById<TextView>(R.id.tvLegIndexValue)
+        val btnLegMinus = dialogView.findViewById<MaterialButton>(R.id.btnLegMinus)
+        val btnLegPlus = dialogView.findViewById<MaterialButton>(R.id.btnLegPlus)
+        val switchCarrying = dialogView.findViewById<MaterialSwitch>(R.id.switchCarrying)
+        val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancelSettings)
+        val btnSave = dialogView.findViewById<MaterialButton>(R.id.btnSaveSettings)
+
+        var selectedLeg = currentBaton?.legIndex ?: 1
+        etRunnerName.setText(currentBaton?.runnerName ?: "Corredor 1")
+        etTeamId.setText(currentBaton?.teamId ?: "EQUIPO-ALFA")
+        etRaceId.setText(currentBaton?.raceId ?: "CARRERA-2026-ALFA")
+        tvLegIndexValue.text = selectedLeg.toString()
+        switchCarrying.isChecked = isCarrying
+
+        btnLegMinus.setOnClickListener {
+            if (selectedLeg > 1) {
+                selectedLeg--
+                tvLegIndexValue.text = selectedLeg.toString()
+            }
+        }
+
+        btnLegPlus.setOnClickListener {
+            if (selectedLeg < 12) {
+                selectedLeg++
+                tvLegIndexValue.text = selectedLeg.toString()
+            }
+        }
+
+        val alertDialog = MaterialAlertDialogBuilder(this)
+            .setView(dialogView)
+            .setCancelable(true)
+            .create()
+
+        btnCancel.setOnClickListener {
+            alertDialog.dismiss()
+        }
+
+        btnSave.setOnClickListener {
+            val runner = etRunnerName.text?.toString()?.trim().takeUnless { it.isNullOrEmpty() } ?: "Corredor $selectedLeg"
+            val team = etTeamId.text?.toString()?.trim().takeUnless { it.isNullOrEmpty() } ?: "EQUIPO-ALFA"
+            val race = etRaceId.text?.toString()?.trim().takeUnless { it.isNullOrEmpty() } ?: "CARRERA-2026-ALFA"
+            val carrying = switchCarrying.isChecked
+
+            val updatedBaton = BatonData(
+                raceId = race,
+                teamId = team,
+                legIndex = selectedLeg,
+                runnerName = runner,
+                timestampMs = System.currentTimeMillis(),
+                signatureToken = "SIG-CONF-$selectedLeg-${System.currentTimeMillis() % 1000}"
+            )
+
+            BatonManager.updateBaton(updatedBaton, carrying = carrying)
+            performTactileClick()
+            Toast.makeText(this, "✅ Configuración de carrera guardada", Toast.LENGTH_SHORT).show()
+            alertDialog.dismiss()
+        }
+
+        alertDialog.show()
+    }
+
+    private fun showSensorCalibrationDialog() {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_sensor_calibration, null)
+        val progressCalibration = dialogView.findViewById<CircularProgressIndicator>(R.id.progressCalibration)
+        val tvCountdown = dialogView.findViewById<TextView>(R.id.tvCalibrationCountdown)
+        val tvTelemetry = dialogView.findViewById<TextView>(R.id.tvCalibrationTelemetry)
+        val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancelCalibration)
+        val btnStart = dialogView.findViewById<MaterialButton>(R.id.btnStartCalibration)
+
+        var calibrationJob: Job? = null
+
+        val alertDialog = MaterialAlertDialogBuilder(this)
+            .setView(dialogView)
+            .setCancelable(false)
+            .create()
+
+        btnCancel.setOnClickListener {
+            calibrationJob?.cancel()
+            isCalibrating = false
+            alertDialog.dismiss()
+        }
+
+        btnStart.setOnClickListener {
+            btnStart.isEnabled = false
+            btnCancel.isEnabled = false
+            isCalibrating = true
+
+            calibrationJob = lifecycleScope.launch {
+                val samples = mutableListOf<Float>()
+                val durationMs = 3000L
+                val intervalMs = 50L
+                val totalTicks = (durationMs / intervalMs).toInt()
+
+                tvCountdown.text = "Mantén el dispositivo firme..."
+
+                for (i in 1..totalTicks) {
+                    delay(intervalMs)
+                    val progress = (i * 100) / totalTicks
+                    progressCalibration.progress = progress
+
+                    val remainingSeconds = String.format(Locale.US, "%.1fs", (durationMs - (i * intervalMs)) / 1000.0)
+                    tvCountdown.text = "Calibrando... $remainingSeconds"
+
+                    // Muestrear magnitud instantánea
+                    samples.add(lastAccMagnitude)
+                    tvTelemetry.text = String.format(Locale.US, "Muestra: %.2f m/s² (N=%d)", lastAccMagnitude, samples.size)
+                }
+
+                if (samples.isNotEmpty()) {
+                    val avgMag = samples.average().toFloat()
+                    val variance = samples.map { (it - avgMag) * (it - avgMag) }.average().toFloat()
+                    val stdDev = sqrt(variance)
+
+                    baselineGravity = if (avgMag in 8.0f..12.0f) avgMag else SensorManager.GRAVITY_EARTH
+                    sensorNoiseThreshold = maxOf(0.35f, stdDev * 2.2f)
+                    filteredAccel = baselineGravity
+                    isCalibrated = true
+
+                    // Resetear contadores espurios
+                    initialStepCounterValue = -1
+                    stepTimestamps.clear()
+
+                    tvCountdown.text = "✅ ¡Calibración exitosa!"
+                    tvTelemetry.text = String.format(
+                        Locale.US,
+                        "Gravedad basal: %.2f m/s² • Ruido: ±%.2f",
+                        baselineGravity,
+                        sensorNoiseThreshold
+                    )
+                    vibrateHandoffSent()
+                    tvSensorStatus.text = "● Calibrado"
+                    tvSensorStatus.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.accent_cyan))
+
+                    delay(800L)
+                }
+
+                isCalibrating = false
+                btnCancel.isEnabled = true
+                btnCancel.text = "Aceptar"
+                alertDialog.dismiss()
+            }
+        }
+
+        alertDialog.show()
+    }
+
+    // ==========================================
+    // OBSERVACIÓN DEL ESTADO DEL TESTIGO
+    // ==========================================
 
     private fun observeBatonState() {
         lifecycleScope.launch {
@@ -481,6 +689,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         totalSteps = 0
         initialStepCounterValue = -1
         stepTimestamps.clear()
+        lastStepDetectedTime = 0L
 
         tvTimerStatus.text = "LISTO"
         tvTimerStatus.setTextColor(ContextCompat.getColor(this, R.color.accent_cyan))
@@ -531,18 +740,22 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 val y = event.values[1]
                 val z = event.values[2]
                 val magnitude = sqrt(x * x + y * y + z * z)
+                lastAccMagnitude = magnitude
 
-                filteredAccel = accelFilterAlpha * filteredAccel + (1 - accelFilterAlpha) * magnitude
-                val delta = magnitude - filteredAccel
-                val now = System.currentTimeMillis()
+                if (!isCalibrating) {
+                    filteredAccel = accelFilterAlpha * filteredAccel + (1 - accelFilterAlpha) * magnitude
+                    val delta = magnitude - filteredAccel
+                    val now = System.currentTimeMillis()
 
-                if (delta > 2.8f && (now - lastAccelerometerStepTime) > 300) {
-                    lastAccelerometerStepTime = now
-                    if (stepDetectorSensor == null) {
-                        onStepDetected()
+                    // Umbral calibrado de paso por acelerómetro
+                    val triggerThreshold = maxOf(2.5f, sensorNoiseThreshold + 1.8f)
+                    if (delta > triggerThreshold && (now - lastAccelerometerStepTime) > 260) {
+                        lastAccelerometerStepTime = now
+                        if (stepDetectorSensor == null) {
+                            onStepDetected()
+                        }
                     }
                 }
-                lastAccMagnitude = magnitude
             }
         }
     }
@@ -555,6 +768,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         if (timerState != TimerState.RUNNING) return
         totalSteps++
         val now = System.currentTimeMillis()
+        lastStepDetectedTime = now
         synchronized(stepTimestamps) {
             stepTimestamps.add(now)
             stepTimestamps.removeAll { now - it > CADENCE_WINDOW_MS }
@@ -565,20 +779,28 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun updateCadenceAndTelemetry() {
         val now = System.currentTimeMillis()
         var currentCadence = 0
-        synchronized(stepTimestamps) {
-            stepTimestamps.removeAll { now - it > CADENCE_WINDOW_MS }
-            if (stepTimestamps.size >= 2) {
-                val spanMs = stepTimestamps.last() - stepTimestamps.first()
-                if (spanMs > 400) {
-                    val spm = (stepTimestamps.size - 1) * 60000.0 / spanMs
-                    currentCadence = spm.toInt().coerceIn(0, 260)
+
+        // Si ha pasado más del tiempo de inactividad sin pasos, decae la cadencia a 0
+        if (now - lastStepDetectedTime > INACTIVITY_CADENCE_TIMEOUT_MS) {
+            synchronized(stepTimestamps) {
+                stepTimestamps.clear()
+            }
+        } else {
+            synchronized(stepTimestamps) {
+                stepTimestamps.removeAll { now - it > CADENCE_WINDOW_MS }
+                if (stepTimestamps.size >= 2) {
+                    val spanMs = stepTimestamps.last() - stepTimestamps.first()
+                    if (spanMs > 400) {
+                        val spm = (stepTimestamps.size - 1) * 60000.0 / spanMs
+                        currentCadence = spm.toInt().coerceIn(0, 260)
+                    }
                 }
             }
         }
 
         val distance = totalSteps * STRIDE_LENGTH_METERS
         val speedMps = (currentCadence / 60.0f) * STRIDE_LENGTH_METERS
-        val paceMinPerKm = if (speedMps > 0.4f) {
+        val paceMinPerKm = if (speedMps > 0.5f) {
             (1000f / speedMps) / 60f
         } else {
             0f
@@ -592,7 +814,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         tvDistanceValue.text = String.format(Locale.US, "%.1f", distanceMeters)
         tvStepCountValue.text = steps.toString()
 
-        if (paceMinutesPerKm > 0.1f && paceMinutesPerKm < 30f) {
+        if (paceMinutesPerKm > 0.5f && paceMinutesPerKm < 30f) {
             val paceMin = paceMinutesPerKm.toInt()
             val paceSec = ((paceMinutesPerKm - paceMin) * 60).toInt()
             tvPaceValue.text = String.format(Locale.US, "%d:%02d", paceMin, paceSec)

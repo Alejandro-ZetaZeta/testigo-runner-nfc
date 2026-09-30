@@ -14,6 +14,7 @@ struct ContentView: View {
 
     // Hojas Modales y Alertas
     @State private var showingSettings: Bool = false
+    @State private var showingCalibration: Bool = false
     @State private var showingSplits: Bool = false
     @State private var alertMessage: String = ""
     @State private var showAlert: Bool = false
@@ -60,6 +61,9 @@ struct ContentView: View {
         .sheet(isPresented: $showingSettings) {
             SettingsSheet(batonManager: batonManager)
         }
+        .sheet(isPresented: $showingCalibration) {
+            CalibrationSheet(motionManager: motionManager)
+        }
         .sheet(isPresented: $showingSplits) {
             SplitsSheet(splits: locationManager.splits)
         }
@@ -102,6 +106,15 @@ struct ContentView: View {
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(Color.cyan.opacity(0.4), lineWidth: 1)
             )
+
+            // Botón de Calibración
+            Button(action: { showingCalibration = true }) {
+                Image(systemName: "scope")
+                    .foregroundColor(motionManager.isCalibrated ? .cyan : .yellow)
+                    .padding(8)
+                    .background(Color.white.opacity(0.08))
+                    .clipShape(Circle())
+            }
 
             // Botón de Ajustes
             Button(action: { showingSettings = true }) {
@@ -172,7 +185,7 @@ struct ContentView: View {
                             (batonManager.isCarryingBaton ? Color.green : Color.orange).opacity(0.3),
                             lineWidth: 1.5
                         )
-                )
+        )
         )
     }
 
@@ -573,6 +586,63 @@ struct SettingsSheet: View {
                 legIndex = batonManager.currentLegIndex
                 isCarrying = batonManager.isCarryingBaton
             }
+        }
+    }
+}
+
+struct CalibrationSheet: View {
+    @ObservedObject var motionManager: MotionManager
+    @Environment(\.dismiss) var dismiss
+    @State private var statusMessage: String = "Coloca el dispositivo en reposo o sostenlo con firmeza durante 3 segundos."
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                Image(systemName: "scope")
+                    .font(.system(size: 60))
+                    .foregroundColor(.yellow)
+                    .padding(.top, 20)
+
+                Text("Calibración de Sensores")
+                    .font(.title2.bold())
+
+                Text(statusMessage)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+
+                if motionManager.isCalibrating {
+                    ProgressView(value: motionManager.calibrationProgress, total: 1.0)
+                        .progressViewStyle(LinearProgressViewStyle(tint: .yellow))
+                        .padding(.horizontal, 32)
+                }
+
+                Spacer()
+
+                Button(action: {
+                    statusMessage = "Calibrando punto cero y ruido de sensores..."
+                    motionManager.calibrateSensors { success in
+                        statusMessage = "✅ ¡Sensores calibrados exitosamente!"
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                            dismiss()
+                        }
+                    }
+                }) {
+                    Text(motionManager.isCalibrating ? "Calibrando..." : "Iniciar Calibración")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.yellow)
+                        .foregroundColor(.black)
+                        .cornerRadius(12)
+                }
+                .disabled(motionManager.isCalibrating)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 20)
+            }
+            .navigationTitle("Calibrar")
+            .navigationBarItems(trailing: Button("Cerrar") { dismiss() })
         }
     }
 }
