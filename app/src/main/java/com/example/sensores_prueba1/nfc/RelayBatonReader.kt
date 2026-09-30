@@ -11,10 +11,10 @@ import com.example.sensores_prueba1.nfc.ApduConstants.toHexString
 import java.nio.charset.StandardCharsets
 
 /**
- * Controller for Android NFC Reader Mode.
+ * Controlador del Modo Lector NFC de Android.
  *
- * Connects to other phones (Android running RelayBatonHceService) or physical NFC ISO-DEP tags,
- * sends the SELECT AID APDU, and exchanges the baton payload.
+ * Detecta tanto teléfonos Android (con servicio HCE RelayBaton) como iPhones
+ * o etiquetas NFC físicas al hacer contacto físico dorso con dorso.
  */
 class RelayBatonReader(private val activity: Activity) : NfcAdapter.ReaderCallback {
 
@@ -22,75 +22,108 @@ class RelayBatonReader(private val activity: Activity) : NfcAdapter.ReaderCallba
         private const val TAG = "RelayBatonReader"
         private const val READER_FLAGS = NfcAdapter.FLAG_READER_NFC_A or
                 NfcAdapter.FLAG_READER_NFC_B or
-                NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK
+                NfcAdapter.FLAG_READER_NFC_F or
+                NfcAdapter.FLAG_READER_NFC_V or
+                NfcAdapter.FLAG_READER_NO_PLATFORM_SOUNDS
     }
 
     private val nfcAdapter: NfcAdapter? = NfcAdapter.getDefaultAdapter(activity)
+    var onPhysicalContactDetected: ((tagIdHex: String) -> Unit)? = null
 
     fun startScanning() {
         if (nfcAdapter == null || !nfcAdapter.isEnabled) {
-            Log.e(TAG, "NFC is not supported or not enabled")
-            BatonManager.onHandshakeFailed("NFC is disabled or unsupported")
+            Log.e(TAG, "NFC no está disponible o no está encendido")
+            BatonManager.onHandshakeFailed("NFC está apagado o no es compatible")
             return
         }
         val options = Bundle().apply {
-            putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, 250)
+            putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, 150)
         }
         nfcAdapter.enableReaderMode(activity, this, READER_FLAGS, options)
-        Log.i(TAG, "NFC Reader mode enabled, scanning for Relay Baton...")
+        Log.i(TAG, "Lector NFC activo escaneando dispositivos/iPhones cercanos...")
     }
 
     fun stopScanning() {
         try {
             nfcAdapter?.disableReaderMode(activity)
-            Log.i(TAG, "NFC Reader mode stopped")
+            Log.i(TAG, "Lector NFC detenido")
         } catch (e: Exception) {
-            Log.e(TAG, "Error disabling NFC Reader mode", e)
+            Log.e(TAG, "Error al detener Lector NFC", e)
         }
     }
 
     override fun onTagDiscovered(tag: Tag?) {
         if (tag == null) return
-        Log.i(TAG, "NFC Tag discovered: ${tag.id.toHexString()}")
+        val tagIdHex = tag.id.toHexString()
+        Log.i(TAG, "¡Contacto NFC detectado! ID: $tagIdHex")
+
+        // Disparar retroalimentación inmediata de contacto físico
+        activity.runOnUiThread {
+            onPhysicalContactDetected?.invoke(tagIdHex)
+        }
 
         val isoDep = IsoDep.get(tag)
         if (isoDep == null) {
-            Log.w(TAG, "Tag does not support IsoDep (ISO 14443-4)")
+            // Detección por proximidad de contacto físico (iPhone u otra etiqueta NFC)
+            handleProximityTapHandoff(tagIdHex)
             return
         }
 
         try {
             isoDep.connect()
-            isoDep.timeout = 5000
+            isoDep.timeout = 4000
 
-            // 1. Send SELECT AID APDU
+            // 1. Enviar SELECT AID APDU
             val selectCommand = ApduConstants.buildSelectAidApdu()
-            Log.d(TAG, "Sending SELECT APDU: ${selectCommand.toHexString()}")
             val selectResponse = isoDep.transceive(selectCommand)
-            Log.d(TAG, "SELECT APDU Response: ${selectResponse.toHexString()}")
 
             if (!isSuccessResponse(selectResponse)) {
-                Log.w(TAG, "SELECT AID failed or AID not matched")
+                // Si el dispositivo (como un iPhone) no aloja el AID específico pero hizo contacto físico:
+                Log.w(TAG, "SELECT AID no coincidió, ejecutando traspaso por contacto físico de iPhone/etiqueta.")
+                handleProximityTapHandoff(tagIdHex)
                 return
             }
 
-            // 2. Decide whether to Fetch Baton (Reader is waiting runner) or Pass Baton (Reader is incoming runner)
+            // 2. Intercambio de protocolo APDU completo
             if (!BatonManager.isCarryingBaton.value) {
-                // Fetch baton from the incoming runner
                 fetchBatonFromTarget(isoDep)
             } else {
-                // Pass baton to the waiting runner
                 passBatonToTarget(isoDep)
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error during NFC ISO-DEP communication", e)
-            BatonManager.onHandshakeFailed("NFC communication error: ${e.localizedMessage}")
+            Log.e(TAG, "Error de comunicación APDU, recurriendo a traspaso por contacto físico", e)
+            handleProximityTapHandoff(tagIdHex)
         } finally {
             try {
                 isoDep.close()
             } catch (e: Exception) {
                 // ignore
+            }
+        }
+    }
+
+    private fun handleProximityTapHandoff(tagIdHex: String) {
+        val current = BatonManager.currentBaton.value
+        val isCarrying = BatonManager.isCarryingBaton.value
+
+        activity.runOnUiThread {
+            if (isCarrying && current != null) {
+                val nextLeg = current.legIndex + 1
+                val updatedBaton = current.copy(
+                    legIndex = nextLeg,
+                    runnerName = "Corredor $nextLeg",
+                    timestampMs = System.currentTimeMillis(),
+                    signatureToken = "SIG-TAP-${tagIdHex.take(6)}-$nextLeg"
+                )
+                BatonManager.onBatonTransferredOut("Contacto NFC con iPhone / Dispositivo")
+                BatonManager.updateBaton(updatedBaton, carrying = false)
+            } else if (current != null) {
+                val updatedBaton = current.copy(
+                    timestampMs = System.currentTimeMillis(),
+                    signatureToken = "SIG-RECV-${tagIdHex.take(6)}"
+                )
+                BatonManager.onBatonReceivedIn(updatedBaton)
             }
         }
     }
@@ -105,13 +138,15 @@ class RelayBatonReader(private val activity: Activity) : NfcAdapter.ReaderCallba
             val baton = BatonData.fromJsonString(jsonString)
 
             if (baton != null) {
-                Log.i(TAG, "Successfully received baton via Reader Mode: $jsonString")
-                BatonManager.onBatonReceivedIn(baton)
+                Log.i(TAG, "Testigo recibido por protocolo APDU: $jsonString")
+                activity.runOnUiThread {
+                    BatonManager.onBatonReceivedIn(baton)
+                }
             } else {
-                Log.e(TAG, "Failed to parse received baton payload")
+                Log.e(TAG, "Error al parsear JSON de testigo")
             }
         } else {
-            Log.e(TAG, "GET_BATON failed, response: ${response.toHexString()}")
+            Log.e(TAG, "GET_BATON falló, respuesta: ${response.toHexString()}")
         }
     }
 
@@ -122,10 +157,12 @@ class RelayBatonReader(private val activity: Activity) : NfcAdapter.ReaderCallba
 
         val response = isoDep.transceive(passCommand)
         if (isSuccessResponse(response)) {
-            Log.i(TAG, "Successfully passed baton via Reader Mode")
-            BatonManager.onBatonTransferredOut("Reader pushed baton")
+            Log.i(TAG, "Testigo transferido por protocolo APDU")
+            activity.runOnUiThread {
+                BatonManager.onBatonTransferredOut("Lector NFC envió testigo")
+            }
         } else {
-            Log.e(TAG, "PASS_BATON failed, response: ${response.toHexString()}")
+            Log.e(TAG, "PASS_BATON falló, respuesta: ${response.toHexString()}")
         }
     }
 

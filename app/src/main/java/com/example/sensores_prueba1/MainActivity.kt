@@ -7,6 +7,8 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
@@ -208,6 +210,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun initNfcReader() {
         relayBatonReader = RelayBatonReader(this)
+        relayBatonReader.onPhysicalContactDetected = { tagIdHex ->
+            playContactBeep()
+            flashNfcContactVisualFeedback(tagIdHex)
+        }
     }
 
     private fun initSensors() {
@@ -589,6 +595,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun handleHandoffEvent(event: HandoffEvent) {
         when (event) {
             is HandoffEvent.BatonSent -> {
+                playSuccessTone()
                 vibrateHandoffSent()
                 tvNfcHandoffLog.text = "🎉 ¡Traspaso completado! Testigo transferido a la Etapa ${event.baton.legIndex + 1}"
                 tvNfcHandoffLog.setTextColor(ContextCompat.getColor(this, R.color.status_sprint_text))
@@ -597,6 +604,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 Toast.makeText(this, "⚡ ¡Testigo traspasado con éxito!", Toast.LENGTH_SHORT).show()
             }
             is HandoffEvent.BatonReceived -> {
+                playSuccessTone()
                 vibrateBatonReceived()
                 tvNfcHandoffLog.text = "🎉 ¡Testigo recibido! Etapa ${event.baton.legIndex} activa: ¡CORRE!"
                 tvNfcHandoffLog.setTextColor(ContextCompat.getColor(this, R.color.accent_green))
@@ -607,6 +615,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 Toast.makeText(this, "🔥 ¡Testigo recibido! ¡Adelante!", Toast.LENGTH_SHORT).show()
             }
             is HandoffEvent.HandshakeError -> {
+                playTone(ToneGenerator.TONE_PROP_NACK, 250)
                 vibrateError()
                 tvNfcHandoffLog.text = "⚠️ Evento NFC: ${event.reason}"
                 tvNfcHandoffLog.setTextColor(ContextCompat.getColor(this, R.color.accent_amber))
@@ -899,6 +908,60 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun performTactileClick() {
         vibrate(30, 80)
+    }
+
+    private fun playTone(toneType: Int, durationMs: Int = 200) {
+        try {
+            val toneGen = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100)
+            toneGen.startTone(toneType, durationMs)
+        } catch (e: Exception) {
+            Log.w(TAG, "No se pudo reproducir tono: ${e.message}")
+        }
+    }
+
+    private fun playContactBeep() {
+        playTone(ToneGenerator.TONE_PROP_BEEP2, 180)
+    }
+
+    private fun playSuccessTone() {
+        playTone(ToneGenerator.TONE_PROP_ACK, 300)
+    }
+
+    private fun flashNfcContactVisualFeedback(tagIdHex: String) {
+        runOnUiThread {
+            // 1. Vibración táctil inmediata de contacto
+            vibrate(90, 255)
+
+            // 2. Destello visual en la tarjeta de acción NFC
+            val originalStrokeColor = cardNfcAction.strokeColor
+            val originalStrokeWidth = cardNfcAction.strokeWidth
+            val originalBg = cardNfcAction.cardBackgroundColor
+
+            val highlightColor = ContextCompat.getColor(this, R.color.accent_cyan)
+            cardNfcAction.strokeColor = highlightColor
+            cardNfcAction.strokeWidth = (3.5f * resources.displayMetrics.density).toInt()
+            cardNfcAction.setCardBackgroundColor(ContextCompat.getColor(this, R.color.bg_card_elevated))
+
+            // Animar escala de icono NFC
+            ivNfcIcon.animate()
+                .scaleX(1.4f)
+                .scaleY(1.4f)
+                .setDuration(120)
+                .withEndAction {
+                    ivNfcIcon.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start()
+                }
+                .start()
+
+            tvNfcHandoffLog.text = "⚡ ¡CONTACTO NFC DETECTADO! (${tagIdHex.take(8).uppercase()})"
+            tvNfcHandoffLog.setTextColor(highlightColor)
+
+            // Restaurar estilo visual tras 700ms
+            cardNfcAction.postDelayed({
+                cardNfcAction.strokeWidth = originalStrokeWidth
+                cardNfcAction.strokeColor = originalStrokeColor
+                cardNfcAction.setCardBackgroundColor(originalBg)
+            }, 700)
+        }
     }
 
     private fun vibrateBatonReceived() {
