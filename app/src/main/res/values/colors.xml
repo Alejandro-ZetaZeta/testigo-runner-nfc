@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base Colors -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="transparent">#00000000</color>
+
+    <!-- Theme Backgrounds (Dark High-Contrast OLED Theme) -->
+    <color name="bg_primary">#0B0F19</color>
+    <color name="bg_secondary">#131B2E</color>
+    <color name="bg_card">#182238</color>
+    <color name="bg_card_elevated">#202E4C</color>
+    <color name="bg_card_stroke">#2A3C63</color>
+
+    <!-- Baton Status Colors -->
+    <color name="status_sprint_primary">#00E676</color>
+    <color name="status_sprint_secondary">#00B0FF</color>
+    <color name="status_sprint_bg">#102E23</color>
+    <color name="status_sprint_border">#00E676</color>
+    <color name="status_sprint_text">#69F0AE</color>
+
+    <color name="status_wait_primary">#FFAB00</color>
+    <color name="status_wait_secondary">#FF6D00</color>
+    <color name="status_wait_bg">#332408</color>
+    <color name="status_wait_border">#FFAB00</color>
+    <color name="status_wait_text">#FFE082</color>
+
+    <!-- Accent Colors -->
+    <color name="accent_cyan">#00E5FF</color>
+    <color name="accent_amber">#FFD600</color>
+    <color name="accent_green">#00E676</color>
+    <color name="accent_red">#FF5252</color>
+    <color name="accent_purple">#7C4DFF</color>
+
+    <!-- Text Colors -->
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#B0BEC5</color>
+    <color name="text_tertiary">#78909C</color>
+    <color name="text_dim">#455A64</color>
+
+    <!-- Metric Tile Accents -->
+    <color name="metric_cadence">#00E5FF</color>
+    <color name="metric_distance">#76FF03</color>
+    <color name="metric_pace">#FFD600</color>
+    <color name="metric_steps">#FF4081</color>
+    <color name="metric_tile_bg">#141D2F</color>
+
+    <!-- Pulse Animation Colors -->
+    <color name="nfc_pulse_outer">#40FFAB00</color>
+    <color name="nfc_pulse_inner">#80FFAB00</color>
+</resources>

@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Sensores_prueba1</string>
+    <string name="hce_service_name">Servicio NFC Testigo de Relevos</string>
+    <string name="hce_service_desc">Emula un Testigo de Relevos NFC para traspaso entre teléfonos.</string>
+</resources>

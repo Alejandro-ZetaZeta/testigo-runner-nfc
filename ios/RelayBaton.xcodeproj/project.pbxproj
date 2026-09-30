@@ -1,0 +1,369 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1A0000012C00000100000031 /* RelayBatonApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0000012C00000100000011 /* RelayBatonApp.swift */; };
+		1A0000012C00000100000032 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0000012C00000100000012 /* ContentView.swift */; };
+		1A0000012C00000100000033 /* BatonData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0000012C00000100000013 /* BatonData.swift */; };
+		1A0000012C00000100000034 /* BatonManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0000012C00000100000014 /* BatonManager.swift */; };
+		1A0000012C00000100000035 /* NFCReaderManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0000012C00000100000015 /* NFCReaderManager.swift */; };
+		1A0000012C00000100000036 /* MotionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0000012C00000100000016 /* MotionManager.swift */; };
+		1A0000012C00000100000037 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0000012C00000100000017 /* LocationManager.swift */; };
+		1A0000012C00000100000038 /* CoreNFC.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A0000012C00000100000021 /* CoreNFC.framework */; };
+		1A0000012C00000100000039 /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A0000012C00000100000022 /* CoreMotion.framework */; };
+		1A0000012C0000010000003A /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A0000012C00000100000023 /* CoreLocation.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		1A0000012C00000100000011 /* RelayBatonApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayBatonApp.swift; sourceTree = "<group>"; };
+		1A0000012C00000100000012 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		1A0000012C00000100000013 /* BatonData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatonData.swift; sourceTree = "<group>"; };
+		1A0000012C00000100000014 /* BatonManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatonManager.swift; sourceTree = "<group>"; };
+		1A0000012C00000100000015 /* NFCReaderManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NFCReaderManager.swift; sourceTree = "<group>"; };
+		1A0000012C00000100000016 /* MotionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionManager.swift; sourceTree = "<group>"; };
+		1A0000012C00000100000017 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
+		1A0000012C00000100000018 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1A0000012C00000100000019 /* RelayBaton.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RelayBaton.entitlements; sourceTree = "<group>"; };
+		1A0000012C00000100000020 /* RelayBaton.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RelayBaton.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1A0000012C00000100000021 /* CoreNFC.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreNFC.framework; path = System/Library/Frameworks/CoreNFC.framework; sourceTree = SDKROOT; };
+		1A0000012C00000100000022 /* CoreMotion.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMotion.framework; path = System/Library/Frameworks/CoreMotion.framework; sourceTree = SDKROOT; };
+		1A0000012C00000100000023 /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = System/Library/Frameworks/CoreLocation.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		1A0000012C00000100000042 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1A0000012C00000100000038 /* CoreNFC.framework in Frameworks */,
+				1A0000012C00000100000039 /* CoreMotion.framework in Frameworks */,
+				1A0000012C0000010000003A /* CoreLocation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1A0000012C00000100000003 /* MainGroup */ = {
+			isa = PBXGroup;
+			children = (
+				1A0000012C00000100000004 /* RelayBaton */,
+				1A0000012C00000100000006 /* Frameworks */,
+				1A0000012C00000100000005 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		1A0000012C00000100000004 /* RelayBaton */ = {
+			isa = PBXGroup;
+			children = (
+				1A0000012C00000100000011 /* RelayBatonApp.swift */,
+				1A0000012C00000100000012 /* ContentView.swift */,
+				1A0000012C00000100000013 /* BatonData.swift */,
+				1A0000012C00000100000014 /* BatonManager.swift */,
+				1A0000012C00000100000015 /* NFCReaderManager.swift */,
+				1A0000012C00000100000016 /* MotionManager.swift */,
+				1A0000012C00000100000017 /* LocationManager.swift */,
+				1A0000012C00000100000018 /* Info.plist */,
+				1A0000012C00000100000019 /* RelayBaton.entitlements */,
+			);
+			path = RelayBaton;
+			sourceTree = "<group>";
+		};
+		1A0000012C00000100000005 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1A0000012C00000100000020 /* RelayBaton.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		1A0000012C00000100000006 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				1A0000012C00000100000021 /* CoreNFC.framework */,
+				1A0000012C00000100000022 /* CoreMotion.framework */,
+				1A0000012C00000100000023 /* CoreLocation.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1A0000012C00000100000002 /* RelayBaton */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1A0000012C00000100000051 /* Build configuration list for PBXNativeTarget "RelayBaton" */;
+			buildPhases = (
+				1A0000012C00000100000041 /* Sources */,
+				1A0000012C00000100000042 /* Frameworks */,
+				1A0000012C00000100000043 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RelayBaton;
+			productName = RelayBaton;
+			productReference = 1A0000012C00000100000020 /* RelayBaton.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		1A0000012C00000100000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					1A0000012C00000100000002 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = 1A0000012C00000100000054 /* Build configuration list for PBXProject "RelayBaton" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 1A0000012C00000100000003 /* MainGroup */;
+			productRefGroup = 1A0000012C00000100000005 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				1A0000012C00000100000002 /* RelayBaton */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		1A0000012C00000100000043 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		1A0000012C00000100000041 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1A0000012C00000100000031 /* RelayBatonApp.swift in Sources */,
+				1A0000012C00000100000032 /* ContentView.swift in Sources */,
+				1A0000012C00000100000033 /* BatonData.swift in Sources */,
+				1A0000012C00000100000034 /* BatonManager.swift in Sources */,
+				1A0000012C00000100000035 /* NFCReaderManager.swift in Sources */,
+				1A0000012C00000100000036 /* MotionManager.swift in Sources */,
+				1A0000012C00000100000037 /* LocationManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1A0000012C00000100000052 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = RelayBaton/RelayBaton.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = RelayBaton/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = RelayBaton;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports-games";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.RelayBaton;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		1A0000012C00000100000053 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = RelayBaton/RelayBaton.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = RelayBaton/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = RelayBaton;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports-games";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.RelayBaton;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		1A0000012C00000100000055 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDEFINED_VARIABLES = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		1A0000012C00000100000056 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDEFINED_VARIABLES = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1A0000012C00000100000051 /* Build configuration list for PBXNativeTarget "RelayBaton" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1A0000012C00000100000052 /* Debug */,
+				1A0000012C00000100000053 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1A0000012C00000100000054 /* Build configuration list for PBXProject "RelayBaton" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1A0000012C00000100000055 /* Debug */,
+				1A0000012C00000100000056 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = 1A0000012C00000100000001 /* Project object */;
+}

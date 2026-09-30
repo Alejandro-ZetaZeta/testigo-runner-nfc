@@ -1,0 +1,7 @@
+{
+  "$schema": "https://raw.githubusercontent.com/MobAI-App/ios-builder/main/schema.json",
+  "provider": "github",
+  "project": "RelayBaton",
+  "iosPath": "ios",
+  "scheme": "RelayBaton"
+}
