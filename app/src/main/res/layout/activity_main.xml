@@ -22,15 +22,15 @@
             android:paddingTop="12dp"
             android:paddingBottom="24dp">
 
-            <!-- 1. ENCABEZADO DE ESTADO: ID de Carrera, Equipo, Etapa, Corredor -->
+            <!-- 1. ENCABEZADO DE ESTADO (Glass Card): ID de Carrera, Equipo, Etapa, Corredor -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardHeader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 app:cardBackgroundColor="@color/bg_card"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
                 app:strokeColor="@color/bg_card_stroke"
                 app:strokeWidth="1dp">
 
@@ -58,62 +58,62 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:letterSpacing="0.06"
+                            android:letterSpacing="0.08"
                             android:text="HUD RELEVOS"
                             android:textColor="@color/accent_cyan"
                             android:textSize="13sp"
                             android:textStyle="bold" />
 
-                        <!-- Insignia de Etapa -->
+                        <!-- Insignia de Etapa (Liquid Glass Capsule Badge) -->
                         <TextView
                             android:id="@+id/tvLegBadge"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginEnd="8dp"
-                            android:background="@drawable/bg_badge_leg"
-                            android:letterSpacing="0.05"
-                            android:paddingHorizontal="8dp"
+                            android:background="@drawable/bg_glass_badge"
+                            android:letterSpacing="0.06"
+                            android:paddingHorizontal="9dp"
                             android:paddingVertical="4dp"
                             android:text="ETAPA 1"
                             android:textColor="@color/accent_cyan"
                             android:textSize="11sp"
                             android:textStyle="bold" />
 
-                        <!-- Botón Calibrar Sensores -->
+                        <!-- Botón Calibrar Sensores (Liquid Glass Icon Pod) -->
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnCalibrateHeader"
-                            style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
-                            android:layout_width="36dp"
-                            android:layout_height="36dp"
-                            android:layout_marginEnd="4dp"
-                            android:backgroundTint="#26FFFFFF"
+                            android:layout_width="38dp"
+                            android:layout_height="38dp"
+                            android:layout_marginEnd="6dp"
+                            android:background="@drawable/bg_glass_icon_button"
+                            app:backgroundTint="@null"
                             android:contentDescription="Calibrar Sensores"
                             android:insetLeft="0dp"
                             android:insetTop="0dp"
                             android:insetRight="0dp"
                             android:insetBottom="0dp"
                             android:padding="0dp"
-                            app:cornerRadius="18dp"
+                            app:cornerRadius="19dp"
                             app:icon="@drawable/ic_calibrate"
                             app:iconGravity="textStart"
                             app:iconPadding="0dp"
                             app:iconSize="18dp"
                             app:iconTint="@color/accent_amber" />
 
-                        <!-- Botón Configuración de Carrera -->
+                        <!-- Botón Configuración de Carrera (Liquid Glass Icon Pod) -->
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnSettingsHeader"
-                            style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
-                            android:layout_width="36dp"
-                            android:layout_height="36dp"
-                            android:backgroundTint="#26FFFFFF"
+                            android:layout_width="38dp"
+                            android:layout_height="38dp"
+                            android:background="@drawable/bg_glass_icon_button"
+                            app:backgroundTint="@null"
                             android:contentDescription="Configuración de Carrera"
                             android:insetLeft="0dp"
                             android:insetTop="0dp"
                             android:insetRight="0dp"
                             android:insetBottom="0dp"
                             android:padding="0dp"
-                            app:cornerRadius="18dp"
+                            app:cornerRadius="19dp"
                             app:icon="@drawable/ic_settings"
                             app:iconGravity="textStart"
                             app:iconPadding="0dp"
@@ -125,7 +125,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
                         android:layout_marginVertical="10dp"
-                        android:background="@color/bg_card_stroke" />
+                        android:background="@color/glass_card_stroke" />
 
                     <!-- Fila de Detalles de Carrera -->
                     <LinearLayout
@@ -214,16 +214,16 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 2. CRONÓMETRO DE CARRERA EN VIVO -->
+            <!-- 2. CRONÓMETRO DE CARRERA EN VIVO (Elevated Glass Card) -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardTimer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 app:cardBackgroundColor="@color/bg_card_elevated"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="3dp"
-                app:strokeColor="@color/bg_card_stroke"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/glass_card_elevated_stroke"
                 app:strokeWidth="1.5dp">
 
                 <LinearLayout
@@ -231,8 +231,8 @@
                     android:layout_height="wrap_content"
                     android:gravity="center_horizontal"
                     android:orientation="vertical"
-                    android:paddingVertical="18dp"
-                    android:paddingHorizontal="16dp">
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="18dp">
 
                     <LinearLayout
                         android:layout_width="wrap_content"
@@ -261,8 +261,10 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="10dp"
-                            android:background="@drawable/bg_badge_state"
+                            android:background="@drawable/bg_glass_badge"
                             android:letterSpacing="0.05"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="2dp"
                             android:text="LISTO"
                             android:textColor="@color/accent_cyan"
                             android:textSize="10sp"
@@ -295,17 +297,17 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 3. TARJETA DINÁMICA DE ESTADO DEL TESTIGO -->
+            <!-- 3. TARJETA DINÁMICA DE ESTADO DEL TESTIGO (Liquid Glass Status Card) -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardBatonStatus"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 app:cardBackgroundColor="@color/status_sprint_bg"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
                 app:strokeColor="@color/status_sprint_border"
-                app:strokeWidth="2dp">
+                app:strokeWidth="1.5dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -319,12 +321,12 @@
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <!-- Icono de Estado -->
+                        <!-- Icono de Estado (Liquid Glass Metric Pod) -->
                         <FrameLayout
                             android:layout_width="44dp"
                             android:layout_height="44dp"
                             android:layout_marginEnd="12dp"
-                            android:background="@drawable/bg_metric_tile">
+                            android:background="@drawable/bg_glass_metric_tile">
 
                             <ImageView
                                 android:id="@+id/ivBatonStatusIcon"
@@ -361,16 +363,16 @@
                         </LinearLayout>
                     </LinearLayout>
 
-                    <!-- Detalle de Firma de Seguridad / Etapa -->
+                    <!-- Detalle de Firma de Seguridad / Etapa (Glass Tile) -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
-                        android:background="@drawable/bg_metric_tile"
+                        android:background="@drawable/bg_glass_metric_tile"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
                         android:paddingHorizontal="10dp"
-                        android:paddingVertical="6dp">
+                        android:paddingVertical="7dp">
 
                         <ImageView
                             android:layout_width="14dp"
@@ -393,15 +395,15 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 4. TELEMETRÍA DE SENSORES EN TIEMPO REAL (Cuadrícula 2x2) -->
+            <!-- 4. TELEMETRÍA DE SENSORES EN TIEMPO REAL (Glass Card + Cuadrícula 2x2 Glass Tiles) -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardMetrics"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 app:cardBackgroundColor="@color/bg_card"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
                 app:strokeColor="@color/bg_card_stroke"
                 app:strokeWidth="1dp">
 
@@ -437,7 +439,7 @@
                             android:textStyle="bold" />
                     </LinearLayout>
 
-                    <!-- Cuadrícula 2x2 de Métricas -->
+                    <!-- Cuadrícula 2x2 de Métricas Liquid Glass -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -450,7 +452,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginEnd="6dp"
                             android:layout_weight="1"
-                            android:background="@drawable/bg_metric_tile"
+                            android:background="@drawable/bg_glass_metric_tile"
                             android:orientation="vertical"
                             android:padding="10dp">
 
@@ -509,7 +511,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="6dp"
                             android:layout_weight="1"
-                            android:background="@drawable/bg_metric_tile"
+                            android:background="@drawable/bg_glass_metric_tile"
                             android:orientation="vertical"
                             android:padding="10dp">
 
@@ -576,7 +578,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginEnd="6dp"
                             android:layout_weight="1"
-                            android:background="@drawable/bg_metric_tile"
+                            android:background="@drawable/bg_glass_metric_tile"
                             android:orientation="vertical"
                             android:padding="10dp">
 
@@ -635,7 +637,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="6dp"
                             android:layout_weight="1"
-                            android:background="@drawable/bg_metric_tile"
+                            android:background="@drawable/bg_glass_metric_tile"
                             android:orientation="vertical"
                             android:padding="10dp">
 
@@ -691,15 +693,15 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 5. TARJETA DE ACCIÓN NFC / ESTADO -->
+            <!-- 5. TARJETA DE ACCIÓN NFC / ESTADO (Liquid Glass Card) -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardNfcAction"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="14dp"
                 app:cardBackgroundColor="@color/bg_card"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
                 app:strokeColor="@color/bg_card_stroke"
                 app:strokeWidth="1dp">
 
@@ -715,7 +717,7 @@
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <!-- Icono con Anillo de Pulso -->
+                        <!-- Icono con Anillo de Pulso y Glass Pod -->
                         <FrameLayout
                             android:layout_width="52dp"
                             android:layout_height="52dp"
@@ -728,7 +730,7 @@
                                 android:layout_height="52dp"
                                 android:background="@drawable/bg_nfc_pulse_outer" />
 
-                            <!-- Círculo Interior con Icono -->
+                            <!-- Círculo Interior con Icono (Liquid Glass Pod) -->
                             <FrameLayout
                                 android:layout_width="38dp"
                                 android:layout_height="38dp"
@@ -771,110 +773,111 @@
                         </LinearLayout>
                     </LinearLayout>
 
-                    <!-- Registro de Traspaso / Estado -->
+                    <!-- Registro de Traspaso / Estado (Glass Tile) -->
                     <TextView
                         android:id="@+id/tvNfcHandoffLog"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
-                        android:background="@drawable/bg_metric_tile"
+                        android:background="@drawable/bg_glass_metric_tile"
                         android:drawableStart="@drawable/ic_radar"
                         android:drawablePadding="6dp"
                         android:drawableTint="@color/accent_cyan"
                         android:gravity="center_vertical"
                         android:paddingHorizontal="10dp"
-                        android:paddingVertical="6dp"
+                        android:paddingVertical="7dp"
                         android:text="Sistema: Servicio APDU NFC ISO-DEP inicializado"
                         android:textColor="@color/text_tertiary"
                         android:textSize="11sp" />
 
-                    <!-- Botón para Alternar Escáner -->
+                    <!-- Botón para Alternar Escáner (Cyan Liquid Glass Button) -->
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnToggleNfcScan"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
+                        android:layout_height="48dp"
                         android:layout_marginTop="10dp"
+                        android:background="@drawable/bg_glass_button_outlined_cyan"
+                        app:backgroundTint="@null"
                         android:letterSpacing="0.04"
                         android:text="Alternar Lector NFC (Modo Escaneo)"
                         android:textColor="@color/accent_cyan"
-                        app:cornerRadius="10dp"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        app:cornerRadius="24dp"
                         app:icon="@drawable/ic_radar"
                         app:iconGravity="textStart"
-                        app:iconTint="@color/accent_cyan"
-                        app:strokeColor="@color/accent_cyan"
-                        app:strokeWidth="1dp" />
+                        app:iconTint="@color/accent_cyan" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 6. CONTROLES DE CARRERA (Botones de Acción) -->
+            <!-- 6. CONTROLES DE CARRERA (Liquid Glass Buttons) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <!-- Fila Principal: Iniciar/Pausar y Reiniciar -->
+                <!-- Fila Principal: Iniciar/Pausar (.glassProminent Green) y Reiniciar (.glassProminent Red) -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal">
 
-                    <!-- Botón Iniciar / Pausar Etapa -->
+                    <!-- Botón Iniciar / Pausar Etapa (Prominent Liquid Glass Emerald) -->
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnStartPause"
                         android:layout_width="0dp"
                         android:layout_height="52dp"
                         android:layout_marginEnd="6dp"
                         android:layout_weight="1.2"
-                        android:backgroundTint="@color/accent_green"
+                        android:background="@drawable/bg_glass_button_prominent_green"
+                        app:backgroundTint="@null"
                         android:letterSpacing="0.04"
                         android:text="INICIAR ETAPA"
                         android:textColor="@color/black"
                         android:textSize="14sp"
                         android:textStyle="bold"
-                        app:cornerRadius="12dp"
+                        app:cornerRadius="26dp"
                         app:icon="@drawable/ic_play"
                         app:iconGravity="textStart"
                         app:iconTint="@color/black" />
 
-                    <!-- Botón Detener / Reiniciar -->
+                    <!-- Botón Detener / Reiniciar (Liquid Glass Ruby) -->
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnStopReset"
-                        style="@style/Widget.Material3.Button.TonalButton"
                         android:layout_width="0dp"
                         android:layout_height="52dp"
                         android:layout_marginStart="6dp"
                         android:layout_weight="1"
-                        android:backgroundTint="#2D1A22"
+                        android:background="@drawable/bg_glass_button_prominent_red"
+                        app:backgroundTint="@null"
                         android:letterSpacing="0.04"
                         android:text="REINICIAR"
                         android:textColor="@color/accent_red"
                         android:textSize="14sp"
                         android:textStyle="bold"
-                        app:cornerRadius="12dp"
+                        app:cornerRadius="26dp"
                         app:icon="@drawable/ic_refresh"
                         app:iconGravity="textStart"
                         app:iconTint="@color/accent_red" />
                 </LinearLayout>
 
-                <!-- Pasar Testigo (Traspaso Manual / Simulado) -->
+                <!-- Pasar Testigo (Prominent Liquid Glass Amber) -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnPassBaton"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginTop="8dp"
+                    android:layout_height="50dp"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_glass_button_prominent_amber"
+                    app:backgroundTint="@null"
                     android:letterSpacing="0.04"
                     android:text="PASAR TESTIGO / AVANZAR ETAPA"
-                    android:textColor="@color/accent_amber"
+                    android:textColor="@color/black"
                     android:textSize="13sp"
                     android:textStyle="bold"
-                    app:cornerRadius="12dp"
+                    app:cornerRadius="25dp"
                     app:icon="@drawable/ic_swap"
                     app:iconGravity="textStart"
-                    app:iconTint="@color/accent_amber"
-                    app:strokeColor="@color/accent_amber"
-                    app:strokeWidth="1.5dp" />
+                    app:iconTint="@color/black" />
             </LinearLayout>
 
         </LinearLayout>

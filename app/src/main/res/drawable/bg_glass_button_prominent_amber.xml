@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="@color/glass_ripple_amber">
+    <item>
+        <selector>
+            <!-- Pressed State -->
+            <item android:state_pressed="true">
+                <layer-list>
+                    <item>
+                        <shape android:shape="rectangle">
+                            <gradient
+                                android:angle="270"
+                                android:startColor="#FF8F00"
+                                android:endColor="#E65100"
+                                android:type="linear" />
+                            <corners android:radius="26dp" />
+                            <stroke
+                                android:width="1.5dp"
+                                android:color="#E6FFFFFF" />
+                        </shape>
+                    </item>
+                    <item>
+                        <shape android:shape="rectangle">
+                            <corners android:radius="26dp" />
+                            <gradient
+                                android:angle="270"
+                                android:startColor="#80FFFFFF"
+                                android:endColor="#00FFFFFF"
+                                android:type="linear" />
+                        </shape>
+                    </item>
+                </layer-list>
+            </item>
+            <!-- Default Prominent Amber Glass State -->
+            <item>
+                <layer-list>
+                    <item>
+                        <shape android:shape="rectangle">
+                            <gradient
+                                android:angle="270"
+                                android:startColor="@color/glass_btn_amber_start"
+                                android:endColor="@color/glass_btn_amber_end"
+                                android:type="linear" />
+                            <corners android:radius="26dp" />
+                            <stroke
+                                android:width="1.5dp"
+                                android:color="@color/glass_btn_amber_rim" />
+                        </shape>
+                    </item>
+                    <!-- Specular Curved Highlight -->
+                    <item>
+                        <shape android:shape="rectangle">
+                            <corners android:radius="26dp" />
+                            <gradient
+                                android:angle="270"
+                                android:startColor="#66FFFFFF"
+                                android:centerColor="#14FFFFFF"
+                                android:endColor="#00FFFFFF"
+                                android:type="linear" />
+                        </shape>
+                    </item>
+                </layer-list>
+            </item>
+        </selector>
+    </item>
+</ripple>

@@ -560,16 +560,20 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             relayBatonReader.startScanning()
             isNfcReaderManualScanning = true
             btnToggleNfcScan.text = "Lector NFC: Activo (Toca para detener)"
-            btnToggleNfcScan.strokeColor = ContextCompat.getColorStateList(this, R.color.accent_amber)
-            btnToggleNfcScan.setTextColor(ContextCompat.getColor(this, R.color.accent_amber))
+            btnToggleNfcScan.setBackgroundResource(R.drawable.bg_glass_button_prominent_amber)
+            btnToggleNfcScan.backgroundTintList = null
+            btnToggleNfcScan.setTextColor(ContextCompat.getColor(this, R.color.black))
+            btnToggleNfcScan.iconTint = ContextCompat.getColorStateList(this, R.color.black)
         } else {
             if (isNfcReaderManualScanning) {
                 relayBatonReader.stopScanning()
                 isNfcReaderManualScanning = false
             }
             btnToggleNfcScan.text = "Iniciar Lector NFC (Escaneo manual)"
-            btnToggleNfcScan.strokeColor = ContextCompat.getColorStateList(this, R.color.accent_cyan)
+            btnToggleNfcScan.setBackgroundResource(R.drawable.bg_glass_button_outlined_cyan)
+            btnToggleNfcScan.backgroundTintList = null
             btnToggleNfcScan.setTextColor(ContextCompat.getColor(this, R.color.accent_cyan))
+            btnToggleNfcScan.iconTint = ContextCompat.getColorStateList(this, R.color.accent_cyan)
         }
     }
 
@@ -578,15 +582,19 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             relayBatonReader.stopScanning()
             isNfcReaderManualScanning = false
             btnToggleNfcScan.text = "Iniciar Lector NFC (Escaneo manual)"
-            btnToggleNfcScan.strokeColor = ContextCompat.getColorStateList(this, R.color.accent_cyan)
+            btnToggleNfcScan.setBackgroundResource(R.drawable.bg_glass_button_outlined_cyan)
+            btnToggleNfcScan.backgroundTintList = null
             btnToggleNfcScan.setTextColor(ContextCompat.getColor(this, R.color.accent_cyan))
+            btnToggleNfcScan.iconTint = ContextCompat.getColorStateList(this, R.color.accent_cyan)
             tvNfcHandoffLog.text = "Lector NFC pausado manualmente"
         } else {
             relayBatonReader.startScanning()
             isNfcReaderManualScanning = true
             btnToggleNfcScan.text = "Lector NFC: Activo (Toca para detener)"
-            btnToggleNfcScan.strokeColor = ContextCompat.getColorStateList(this, R.color.accent_amber)
-            btnToggleNfcScan.setTextColor(ContextCompat.getColor(this, R.color.accent_amber))
+            btnToggleNfcScan.setBackgroundResource(R.drawable.bg_glass_button_prominent_amber)
+            btnToggleNfcScan.backgroundTintList = null
+            btnToggleNfcScan.setTextColor(ContextCompat.getColor(this, R.color.black))
+            btnToggleNfcScan.iconTint = ContextCompat.getColorStateList(this, R.color.black)
             tvNfcHandoffLog.text = "Lector NFC escaneando etiquetas ISO-DEP cercanas..."
             startPulseAnimation()
         }
@@ -660,7 +668,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         btnStartPause.text = "PAUSAR ETAPA"
         btnStartPause.setIconResource(R.drawable.ic_pause)
-        btnStartPause.backgroundTintList = ContextCompat.getColorStateList(this, R.color.accent_amber)
+        btnStartPause.setBackgroundResource(R.drawable.bg_glass_button_prominent_amber)
+        btnStartPause.backgroundTintList = null
+        btnStartPause.setTextColor(ContextCompat.getColor(this, R.color.black))
+        btnStartPause.iconTint = ContextCompat.getColorStateList(this, R.color.black)
 
         gpsTracker.startTracking()
 
@@ -689,7 +700,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         btnStartPause.text = "REANUDAR ETAPA"
         btnStartPause.setIconResource(R.drawable.ic_play)
-        btnStartPause.backgroundTintList = ContextCompat.getColorStateList(this, R.color.accent_green)
+        btnStartPause.setBackgroundResource(R.drawable.bg_glass_button_prominent_green)
+        btnStartPause.backgroundTintList = null
+        btnStartPause.setTextColor(ContextCompat.getColor(this, R.color.black))
+        btnStartPause.iconTint = ContextCompat.getColorStateList(this, R.color.black)
     }
 
     private fun resetRace() {
@@ -711,7 +725,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         btnStartPause.text = "INICIAR ETAPA"
         btnStartPause.setIconResource(R.drawable.ic_play)
-        btnStartPause.backgroundTintList = ContextCompat.getColorStateList(this, R.color.accent_green)
+        btnStartPause.setBackgroundResource(R.drawable.bg_glass_button_prominent_green)
+        btnStartPause.backgroundTintList = null
+        btnStartPause.setTextColor(ContextCompat.getColor(this, R.color.black))
+        btnStartPause.iconTint = ContextCompat.getColorStateList(this, R.color.black)
 
         updateMetricsUI(cadence = 0, distanceMeters = 0f, paceMinutesPerKm = 0f, steps = 0)
     }
@@ -933,19 +950,20 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             vibrate(90, 255)
 
             // 2. Destello visual en la tarjeta de acción NFC
-            val originalStrokeColor = cardNfcAction.strokeColor
+            val originalStrokeColor = cardNfcAction.strokeColorStateList
             val originalStrokeWidth = cardNfcAction.strokeWidth
             val originalBg = cardNfcAction.cardBackgroundColor
 
             val highlightColor = ContextCompat.getColor(this, R.color.accent_cyan)
-            cardNfcAction.strokeColor = highlightColor
-            cardNfcAction.strokeWidth = (3.5f * resources.displayMetrics.density).toInt()
+            val highlightColorStateList = ContextCompat.getColorStateList(this, R.color.accent_cyan)
+            cardNfcAction.setStrokeColor(highlightColorStateList)
+            cardNfcAction.strokeWidth = (2.5f * resources.displayMetrics.density).toInt()
             cardNfcAction.setCardBackgroundColor(ContextCompat.getColor(this, R.color.bg_card_elevated))
 
             // Animar escala de icono NFC
             ivNfcIcon.animate()
-                .scaleX(1.4f)
-                .scaleY(1.4f)
+                .scaleX(1.35f)
+                .scaleY(1.35f)
                 .setDuration(120)
                 .withEndAction {
                     ivNfcIcon.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start()
@@ -958,7 +976,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             // Restaurar estilo visual tras 700ms
             cardNfcAction.postDelayed({
                 cardNfcAction.strokeWidth = originalStrokeWidth
-                cardNfcAction.strokeColor = originalStrokeColor
+                cardNfcAction.setStrokeColor(originalStrokeColor)
                 cardNfcAction.setCardBackgroundColor(originalBg)
             }, 700)
         }

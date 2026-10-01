@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Emerald Glowing Frosted Body with Refraction Rim -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/status_sprint_bg" />
+            <corners android:radius="20dp" />
+            <stroke
+                android:width="1.5dp"
+                android:color="@color/status_sprint_border" />
+        </shape>
+    </item>
+    <!-- Multi-Tone Dynamic Glass Reflection -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="20dp" />
+            <gradient
+                android:angle="270"
+                android:startColor="#3300E676"
+                android:centerColor="#1000B0FF"
+                android:endColor="#00000000"
+                android:type="linear" />
+        </shape>
+    </item>
+</layer-list>

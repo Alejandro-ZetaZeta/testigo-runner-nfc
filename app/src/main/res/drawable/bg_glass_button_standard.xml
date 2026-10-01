@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="@color/glass_ripple_white">
+    <item>
+        <selector>
+            <!-- Pressed / Active Glass State -->
+            <item android:state_pressed="true">
+                <layer-list>
+                    <item>
+                        <shape android:shape="rectangle">
+                            <solid android:color="#40FFFFFF" />
+                            <corners android:radius="24dp" />
+                            <stroke
+                                android:width="1.5dp"
+                                android:color="#80FFFFFF" />
+                        </shape>
+                    </item>
+                    <item>
+                        <shape android:shape="rectangle">
+                            <corners android:radius="24dp" />
+                            <gradient
+                                android:angle="270"
+                                android:startColor="#4DFFFFFF"
+                                android:endColor="#1AFFFFFF"
+                                android:type="linear" />
+                        </shape>
+                    </item>
+                </layer-list>
+            </item>
+            <!-- Default Translucent Liquid Glass State -->
+            <item>
+                <layer-list>
+                    <item>
+                        <shape android:shape="rectangle">
+                            <solid android:color="@color/glass_btn_std_bg" />
+                            <corners android:radius="24dp" />
+                            <stroke
+                                android:width="1.2dp"
+                                android:color="@color/glass_btn_std_stroke" />
+                        </shape>
+                    </item>
+                    <!-- Specular Top Highlight -->
+                    <item>
+                        <shape android:shape="rectangle">
+                            <corners android:radius="24dp" />
+                            <gradient
+                                android:angle="270"
+                                android:startColor="#33FFFFFF"
+                                android:centerColor="#0DFFFFFF"
+                                android:endColor="#00FFFFFF"
+                                android:type="linear" />
+                        </shape>
+                    </item>
+                </layer-list>
+            </item>
+        </selector>
+    </item>
+</ripple>

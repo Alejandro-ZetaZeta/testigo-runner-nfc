@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Elevated Translucent Frosted Glass Base Surface with Specular Rim -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/bg_card_elevated" />
+            <corners android:radius="20dp" />
+            <stroke
+                android:width="1.5dp"
+                android:color="@color/glass_card_elevated_stroke" />
+        </shape>
+    </item>
+    <!-- Multi-Tone Specular Gradient Top Highlight -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="20dp" />
+            <gradient
+                android:angle="270"
+                android:startColor="@color/glass_specular_gradient_start"
+                android:centerColor="@color/glass_specular_gradient_mid"
+                android:endColor="@color/glass_specular_gradient_end"
+                android:type="linear" />
+        </shape>
+    </item>
+</layer-list>

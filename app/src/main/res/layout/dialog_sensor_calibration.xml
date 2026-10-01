@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/bg_card_rounded"
+    android:background="@drawable/bg_glass_card"
     android:orientation="vertical"
     android:padding="20dp">
 
@@ -43,13 +43,13 @@
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginVertical="12dp"
-        android:background="@color/bg_card_stroke" />
+        android:background="@color/glass_card_stroke" />
 
     <!-- Estado y Progreso de Calibración -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/bg_metric_tile"
+        android:background="@drawable/bg_glass_metric_tile"
         android:gravity="center"
         android:orientation="vertical"
         android:padding="16dp">
@@ -107,13 +107,14 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnStartCalibration"
-            style="@style/Widget.Material3.Button"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:backgroundTint="@color/accent_amber"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_glass_button_prominent_amber"
+            app:backgroundTint="@null"
+            android:paddingHorizontal="16dp"
             android:text="Iniciar Calibración (3s)"
             android:textColor="@color/black"
             android:textStyle="bold"
-            app:cornerRadius="10dp" />
+            app:cornerRadius="22dp" />
     </LinearLayout>
 </LinearLayout>

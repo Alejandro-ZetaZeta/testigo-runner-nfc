@@ -111,6 +111,33 @@ jobs:
           param flutter_version  "$IN_FLUTTER_VERSION" '.flutter.version' ''
           param jdk_version      "$IN_JDK_VERSION" '.kmp.jdkVersion' '17'
 
+      # Ensure CoreSimulator device directories and MobAI cache directories exist,
+      # and remove any corrupted or zero-byte archives before MobAI attempts tar extraction.
+      - name: Pre-simulator setup & cache validation
+        run: |
+          set -e
+          echo "Preparing Simulator and MobAI cache directories..."
+          mkdir -p "$HOME/Library/Developer/CoreSimulator/Devices"
+          mkdir -p "/Users/runner/Library/Developer/CoreSimulator/Devices"
+          mkdir -p "${RUNNER_TEMP:-/Users/runner/work/_temp}/mobai-cache"
+          mkdir -p "/Users/runner/work/_temp/mobai-cache"
+
+          # Clear corrupted or zero-byte cached archives if present
+          for cache_dir in "${RUNNER_TEMP:-/Users/runner/work/_temp}/mobai-cache" "/Users/runner/work/_temp/mobai-cache"; do
+            if [ -d "$cache_dir" ]; then
+              for archive in "$cache_dir"/*.tar "$cache_dir"/*.tar.gz; do
+                if [ -e "$archive" ]; then
+                  if [ ! -s "$archive" ] || ! tar -tf "$archive" >/dev/null 2>&1; then
+                    echo "::warning::Corrupt or empty simulator archive detected ($archive). Removing..."
+                    rm -f "$archive"
+                  else
+                    echo "Cached simulator archive ($archive) verified OK."
+                  fi
+                fi
+              done
+            fi
+          done
+
       # Starts the simulator booting in the background (cached, so later runs
       # boot fast) while the app builds.
       - name: Install mobai-ci + boot simulator
