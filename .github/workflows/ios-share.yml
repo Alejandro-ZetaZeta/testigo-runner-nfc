@@ -116,19 +116,9 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - name: Restore simulator cache fallback
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ runner.temp }}/mobai-cache
-          key: mobai-sim-${{ runner.os }}-iPhone15-${{ github.run_id }}
-          restore-keys: |
-            mobai-sim-${{ runner.os }}-iPhone15-
-            mobai-sim-${{ runner.os }}-
-            mobai-sim-
-
       # Ensure CoreSimulator device directories and MobAI cache directories exist,
-      # and remove any corrupted or zero-byte archives before MobAI attempts tar extraction.
-      - name: Pre-simulator setup & cache validation
+      # and remove any stale/corrupted archives before MobAI attempts tar extraction.
+      - name: Pre-simulator setup & cache cleanup
         run: |
           set -e
           echo "Preparing Simulator and MobAI cache directories..."
@@ -137,19 +127,10 @@ jobs:
           mkdir -p "${RUNNER_TEMP:-/Users/runner/work/_temp}/mobai-cache"
           mkdir -p "/Users/runner/work/_temp/mobai-cache"
 
-          # Clear corrupted or zero-byte cached archives if present
+          # Clear any leftover archives before MobAI restores its device-specific cache
           for cache_dir in "${RUNNER_TEMP:-/Users/runner/work/_temp}/mobai-cache" "/Users/runner/work/_temp/mobai-cache"; do
             if [ -d "$cache_dir" ]; then
-              for archive in "$cache_dir"/*.tar "$cache_dir"/*.tar.gz; do
-                if [ -e "$archive" ]; then
-                  if [ ! -s "$archive" ] || ! tar -tf "$archive" >/dev/null 2>&1; then
-                    echo "::warning::Corrupt or empty simulator archive detected ($archive). Removing..."
-                    rm -f "$archive"
-                  else
-                    echo "Cached simulator archive ($archive) verified OK."
-                  fi
-                fi
-              done
+              rm -rf "$cache_dir"/*
             fi
           done
 
@@ -160,7 +141,6 @@ jobs:
         with:
           boot-sim: true # UDID lands in $MOBAI_SIM_UDID
           sim-device-type: "iPhone 15"
-          sim-slim-only: widgets
 
       - name: Restore DerivedData cache
         uses: actions/cache/restore@v6
@@ -428,21 +408,6 @@ jobs:
         with:
           path: DerivedData
           key: deriveddata-sim-${{ github.run_id }}
-
-      - name: Check for MobAI simulator cache
-        id: simcache_check
-        if: always()
-        run: |
-          if [ -d "${{ runner.temp }}/mobai-cache" ] && [ -n "$(ls -A "${{ runner.temp }}/mobai-cache" 2>/dev/null)" ]; then
-            echo "exists=yes" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Save simulator cache fallback
-        if: always() && steps.simcache_check.outputs.exists == 'yes'
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ runner.temp }}/mobai-cache
-          key: mobai-sim-${{ runner.os }}-iPhone15-${{ github.run_id }}
 
       # Installs the build on the simulator and publishes it to the MobAI app.
       # The step (and the job) stay running until the simulator is released
