@@ -59,7 +59,11 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showingSettings) {
-            SettingsSheet(batonManager: batonManager)
+            SettingsSheet(batonManager: batonManager, onSave: {
+                if batonManager.currentLegIndex > 1 {
+                    resetRaceTimer()
+                }
+            })
                 .preferredColorScheme(.dark)
                 .sheetPresentationBackground()
         }
@@ -142,18 +146,18 @@ struct ContentView: View {
                     .frame(width: 12, height: 12)
                     .shadow(color: (batonManager.isCarryingBaton ? Color.green : Color.orange).opacity(0.8), radius: 6)
 
-                Text(batonManager.isCarryingBaton ? "TESTIGO EN MANO" : "ESPERANDO EL TRASPASO")
+                Text(batonManager.isCarryingBaton ? "PORTANDO EL TESTIGO (ETAPA \(batonManager.currentLegIndex))" : "ESPERANDO TESTIGO (ETAPA \(batonManager.currentLegIndex))")
                     .font(.system(size: 13, weight: .heavy, design: .monospaced))
                     .foregroundColor(batonManager.isCarryingBaton ? .green : .orange)
 
                 Spacer()
 
-                Text(batonManager.currentBaton?.teamId ?? "EQUIPO-ALFA")
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                Text(batonManager.isCarryingBaton ? "PORTADOR" : "EN ESPERA NFC")
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(Color.white.opacity(0.1))
-                    .foregroundColor(.white)
+                    .background((batonManager.isCarryingBaton ? Color.green : Color.orange).opacity(0.18))
+                    .foregroundColor(batonManager.isCarryingBaton ? .green : .orange)
                     .cornerRadius(8)
             }
 
@@ -161,7 +165,7 @@ struct ContentView: View {
 
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("CORREDOR ACTUAL")
+                    Text("CORREDOR ASIGNADO")
                         .font(.system(size: 10, weight: .bold))
                         .foregroundColor(.gray)
                     Text(batonManager.currentRunnerName)
@@ -172,10 +176,10 @@ struct ContentView: View {
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text("TOKEN DE FIRMA")
+                    Text("ID DE CARRERA")
                         .font(.system(size: 10, weight: .bold))
                         .foregroundColor(.gray)
-                    Text(batonManager.currentBaton?.signatureToken ?? "NINGUNO")
+                    Text(batonManager.currentBaton?.raceId ?? "CARRERA-2026-ALFA")
                         .font(.system(size: 13, weight: .semibold, design: .monospaced))
                         .foregroundColor(.cyan)
                 }
@@ -191,42 +195,121 @@ struct ContentView: View {
                             (batonManager.isCarryingBaton ? Color.green : Color.orange).opacity(0.3),
                             lineWidth: 1.5
                         )
+                )
         )
-        )
+    }
+
+    private var timerStatusColor: Color {
+        if isTimerRunning {
+            return .green
+        } else if batonManager.isCarryingBaton {
+            return .cyan
+        } else {
+            return .orange
+        }
+    }
+
+    private var timerStatusText: String {
+        if isTimerRunning {
+            return "EN CARRERA"
+        } else if batonManager.isCarryingBaton {
+            return "LISTO"
+        } else {
+            return "EN ESPERA (STANDBY)"
+        }
+    }
+
+    private var timerSubtext: String {
+        if isTimerRunning {
+            return "Cronómetro activo • Transmitiendo telemetría en vivo"
+        } else if batonManager.isCarryingBaton {
+            return "Presiona INICIAR ETAPA para arrancar la carrera con el testigo"
+        } else {
+            return "Bloqueado: La etapa arrancará automáticamente al recibir el testigo por NFC."
+        }
     }
 
     private var timerCard: some View {
         VStack(spacing: 12) {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(timerStatusColor)
+                    .frame(width: 8, height: 8)
+                Text(timerStatusText)
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundColor(timerStatusColor)
+            }
+
             Text(formattedElapsedTime)
                 .font(.system(size: 46, weight: .black, design: .monospaced))
                 .foregroundColor(.white)
-                .shadow(color: .cyan.opacity(0.3), radius: 8)
+                .shadow(color: timerStatusColor.opacity(0.3), radius: 8)
+
+            Text(timerSubtext)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(.gray)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 10)
 
             HStack(spacing: 16) {
-                Button(action: toggleRaceTimer) {
-                    HStack {
-                        Image(systemName: isTimerRunning ? "pause.fill" : "play.fill")
-                        Text(isTimerRunning ? "PAUSAR" : "INICIAR CARRERA")
+                if isTimerRunning {
+                    Button(action: pauseRaceTimer) {
+                        HStack {
+                            Image(systemName: "pause.fill")
+                            Text("PAUSAR ETAPA")
+                        }
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundColor(.black)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 10)
+                        .background(Color.yellow)
+                        .cornerRadius(24)
                     }
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundColor(.black)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 10)
-                    .background(isTimerRunning ? Color.yellow : Color.green)
-                    .cornerRadius(24)
-                }
-
-                Button(action: resetRaceTimer) {
-                    HStack {
-                        Image(systemName: "arrow.counterclockwise")
-                        Text("REINICIAR")
+                } else if batonManager.isCarryingBaton {
+                    // Portador (Etapa 1): botón habilitado para inicio manual
+                    Button(action: startRaceTimer) {
+                        HStack {
+                            Image(systemName: "play.fill")
+                            Text("INICIAR ETAPA")
+                        }
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundColor(.black)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 10)
+                        .background(Color.green)
+                        .cornerRadius(24)
+                    }
+                } else {
+                    // Relevista en espera (Etapa 2+): BLOQUEADO en standby, no se permite arranque manual
+                    HStack(spacing: 8) {
+                        Image(systemName: "lock.fill")
+                        Text("ESPERANDO TESTIGO NFC...")
                     }
                     .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 16)
+                    .foregroundColor(Color(red: 1.0, green: 0.88, blue: 0.51))
+                    .padding(.horizontal, 20)
                     .padding(.vertical, 10)
-                    .background(Color.white.opacity(0.12))
+                    .background(Color.orange.opacity(0.18))
                     .cornerRadius(24)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24)
+                            .stroke(Color.orange.opacity(0.4), lineWidth: 1)
+                    )
+                }
+
+                if isTimerRunning || elapsedTime > 0 {
+                    Button(action: resetRaceTimer) {
+                        HStack {
+                            Image(systemName: "arrow.counterclockwise")
+                            Text("REINICIAR")
+                        }
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(Color.white.opacity(0.12))
+                        .cornerRadius(24)
+                    }
                 }
             }
         }
@@ -288,25 +371,27 @@ struct ContentView: View {
                 .transition(.scale.combined(with: .opacity))
             }
 
-            // Botón Principal de Acción NFC
+            // Botón Principal de Acción NFC Automático
             Button(action: triggerNfcHandoff) {
                 HStack(spacing: 12) {
-                    Image(systemName: "wave.3.forward.circle.fill")
+                    Image(systemName: batonManager.isCarryingBaton ? "wave.3.forward.circle.fill" : "wave.3.backward.circle.fill")
                         .font(.system(size: 28))
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(batonManager.isCarryingBaton ? "PASAR TESTIGO (TOCAR / RELEVO)" : "RECIBIR TESTIGO (TOCAR / RELEVO)")
+                        Text(batonManager.isCarryingBaton ? "PASAR TESTIGO (NFC RELEVO)" : "RECIBIR TESTIGO (ESCANEAR NFC)")
                             .font(.system(size: 15, weight: .black, design: .rounded))
-                        Text(nfcManager.isNfcSupported ? "AID ISO 7816: F072656C61793031" : "Traspaso Directo / Tap (Modo Sideload)")
-                            .font(.system(size: 9, weight: .bold, design: .monospaced))
-                            .opacity(0.8)
+                        Text(batonManager.isCarryingBaton
+                             ? "Acerca el teléfono del relevista para transferir"
+                             : "Acerca el teléfono del portador • Inicio 100% automático")
+                            .font(.system(size: 10, weight: .medium))
+                            .opacity(0.85)
                     }
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
                 .background(
                     LinearGradient(
-                        colors: batonManager.isCarryingBaton ? [Color.green, Color.mint] : [Color.blue, Color.cyan],
+                        colors: batonManager.isCarryingBaton ? [Color.green, Color.mint] : [Color.orange, Color.yellow],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
@@ -314,26 +399,9 @@ struct ContentView: View {
                 .foregroundColor(.black)
                 .cornerRadius(18)
                 .shadow(
-                    color: (batonManager.isCarryingBaton ? Color.green : Color.cyan).opacity(0.4),
+                    color: (batonManager.isCarryingBaton ? Color.green : Color.orange).opacity(0.4),
                     radius: 10,
                     y: 4
-                )
-            }
-            // Botón Manual / Simulado de Traspaso (Útil para pruebas sin certificado de pago)
-            Button(action: triggerManualHandoff) {
-                HStack(spacing: 8) {
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                    Text("PASAR TESTIGO / AVANZAR ETAPA (MANUAL)")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(Color.yellow.opacity(0.12))
-                .foregroundColor(.yellow)
-                .cornerRadius(12)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.yellow.opacity(0.35), lineWidth: 1)
                 )
             }
 
@@ -449,34 +517,51 @@ struct ContentView: View {
     // MARK: - Lógica y Acciones
 
     private func triggerNfcHandoff() {
-        if nfcManager.isNfcSupported {
-            nfcManager.beginHandoffSession(
-                isCarrying: batonManager.isCarryingBaton,
-                baton: batonManager.currentBaton,
-                onReceived: { incoming in
-                    batonManager.onBatonReceivedIn(incomingBaton: incoming)
-                },
-                onPassed: { passed in
-                    batonManager.onBatonTransferredOut()
-                },
-                onError: { errorStr in
-                    batonManager.onHandshakeFailed(reason: errorStr)
-                }
-            )
-        } else {
-            // Sideload con cuenta gratuita: ejecutar traspaso directo de inmediato
-            triggerManualHandoff()
+        guard nfcManager.isNfcSupported else {
+            alertMessage = "NFC requiere un dispositivo iPhone físico compatible."
+            showAlert = true
+            return
+        }
+
+        nfcManager.beginHandoffSession(
+            isCarrying: batonManager.isCarryingBaton,
+            baton: batonManager.currentBaton,
+            onReceived: { incoming in
+                handleBatonReceivedAutomatically(incoming)
+            },
+            onPassed: { passed in
+                handleBatonPassedAutomatically(passed)
+            },
+            onError: { errorStr in
+                batonManager.onHandshakeFailed(reason: errorStr)
+            }
+        )
+    }
+
+    private func handleBatonReceivedAutomatically(_ incomingBaton: BatonData) {
+        batonManager.onBatonReceivedIn(incomingBaton: incomingBaton)
+        triggerHapticSuccess()
+
+        // El cronómetro y los sensores arrancan de forma 100% AUTOMÁTICA
+        if !isTimerRunning {
+            startRaceTimer()
         }
     }
 
-    private func triggerManualHandoff() {
-        if batonManager.isCarryingBaton {
-            batonManager.onBatonTransferredOut(info: "Traspaso manual")
-            triggerHapticClick()
-        } else {
-            batonManager.prepareNextLeg()
-            triggerHapticClick()
+    private func handleBatonPassedAutomatically(_ baton: BatonData) {
+        batonManager.onBatonTransferredOut(info: "Traspaso NFC completado")
+        triggerHapticSuccess()
+
+        // El cronómetro y los sensores se pausan de forma 100% AUTOMÁTICA al entregar el testigo
+        if isTimerRunning {
+            pauseRaceTimer()
         }
+    }
+
+    private func triggerHapticSuccess() {
+        let generator = UINotificationFeedbackGenerator()
+        generator.prepare()
+        generator.notificationOccurred(.success)
     }
 
     private func triggerHapticClick() {
@@ -491,29 +576,38 @@ struct ContentView: View {
         }
     }
 
-    private func toggleRaceTimer() {
-        if isTimerRunning {
-            timer?.invalidate()
-            timer = nil
-            isTimerRunning = false
-            motionManager.stopTracking()
-            locationManager.stopTracking()
-        } else {
-            isTimerRunning = true
-            motionManager.startTracking()
-            locationManager.startTracking()
-            timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
-                DispatchQueue.main.async {
-                    self.elapsedTime += 0.05
-                }
+    private func startRaceTimer() {
+        guard !isTimerRunning else { return }
+        isTimerRunning = true
+        motionManager.startTracking()
+        locationManager.startTracking()
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
+            DispatchQueue.main.async {
+                self.elapsedTime += 0.05
             }
         }
     }
 
-    private func resetRaceTimer() {
+    private func pauseRaceTimer() {
+        guard isTimerRunning else { return }
         timer?.invalidate()
         timer = nil
         isTimerRunning = false
+        motionManager.stopTracking()
+        locationManager.stopTracking()
+    }
+
+    private func toggleRaceTimer() {
+        if isTimerRunning {
+            pauseRaceTimer()
+        } else if batonManager.isCarryingBaton {
+            startRaceTimer()
+        }
+    }
+
+    private func resetRaceTimer() {
+        pauseRaceTimer()
         elapsedTime = 0.0
         motionManager.resetMetrics()
         locationManager.resetMetrics()
@@ -583,6 +677,7 @@ struct MetricCard: View {
 
 struct SettingsSheet: View {
     @ObservedObject var batonManager: BatonManager
+    var onSave: (() -> Void)? = nil
     @Environment(\.dismiss) var dismiss
 
     @State private var runnerName: String = ""
@@ -820,21 +915,13 @@ struct SettingsSheet: View {
     }
 
     private func saveSettings() {
-        let cleanRunner = runnerName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Corredor \(legIndex)" : runnerName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let cleanTeam = teamId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "EQUIPO-ALFA" : teamId.trimmingCharacters(in: .whitespacesAndNewlines)
-        let cleanRace = raceId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "CARRERA-2026-ALFA" : raceId.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        batonManager.currentRunnerName = cleanRunner
-        batonManager.currentLegIndex = legIndex
-
-        let baton = BatonData(
-            raceId: cleanRace,
-            teamId: cleanTeam,
-            legIndex: legIndex,
-            runnerName: cleanRunner,
-            signatureToken: "SIG-MANUAL-\(legIndex)"
+        batonManager.setupGroupRunner(
+            raceId: raceId,
+            teamId: teamId,
+            runnerName: runnerName,
+            legIndex: legIndex
         )
-        batonManager.setBaton(baton, carrying: isInitialRunner)
+        onSave?()
         dismiss()
     }
 }

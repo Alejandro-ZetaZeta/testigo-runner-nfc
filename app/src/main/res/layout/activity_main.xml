@@ -844,12 +844,13 @@
                         app:iconTint="@color/accent_red" />
                 </LinearLayout>
 
-                <!-- Pasar Testigo (Prominent Liquid Glass Amber) -->
+                <!-- Pasar Testigo (Oculto de la UI principal para prevenir saltos manuales de etapa) -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnPassBaton"
                     android:layout_width="match_parent"
                     android:layout_height="50dp"
                     android:layout_marginTop="10dp"
+                    android:visibility="gone"
                     android:background="@drawable/bg_glass_button_prominent_amber"
                     app:backgroundTint="@null"
                     android:letterSpacing="0.04"
