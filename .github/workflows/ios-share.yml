@@ -39,10 +39,10 @@ on:
         type: string
         default: ''
       duration:
-        description: 'How long the simulator stays available while unused (e.g. 30m)'
+        description: 'How long the simulator stays available while unused (e.g. 15m)'
         required: false
         type: string
-        default: '30m'
+        default: '15m'
       flutter_version:
         description: 'Flutter version to use (e.g., 3.24.0). Empty means latest stable.'
         required: false
@@ -56,7 +56,7 @@ on:
 
 jobs:
   simulator:
-    runs-on: macos-latest
+    runs-on: macos-14
     permissions:
       contents: write # deletes the trigger tag
     # Bounds the session: a simulator nobody released must not hold a runner
@@ -107,9 +107,24 @@ jobs:
           param build_id         "$IN_BUILD_ID" '""' "${GITHUB_REF_NAME##*/}"
           param ios_path         "$IN_IOS_PATH" '.ios.path' '.'
           param scheme           "$IN_SCHEME" '.ios.scheme' ''
-          param duration         "$IN_DURATION" '""' '30m'
+          param duration         "$IN_DURATION" '""' '15m'
           param flutter_version  "$IN_FLUTTER_VERSION" '.flutter.version' ''
           param jdk_version      "$IN_JDK_VERSION" '.kmp.jdkVersion' '17'
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Restore simulator cache fallback
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/mobai-cache
+          key: mobai-sim-${{ runner.os }}-iPhone15-${{ github.run_id }}
+          restore-keys: |
+            mobai-sim-${{ runner.os }}-iPhone15-
+            mobai-sim-${{ runner.os }}-
+            mobai-sim-
 
       # Ensure CoreSimulator device directories and MobAI cache directories exist,
       # and remove any corrupted or zero-byte archives before MobAI attempts tar extraction.
@@ -144,11 +159,8 @@ jobs:
         uses: MobAI-App/mobai-ci@v1
         with:
           boot-sim: true # UDID lands in $MOBAI_SIM_UDID
-
-      - name: Setup Xcode
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
+          sim-device-type: "iPhone 15"
+          sim-slim-only: widgets
 
       - name: Restore DerivedData cache
         uses: actions/cache/restore@v6
@@ -416,6 +428,21 @@ jobs:
         with:
           path: DerivedData
           key: deriveddata-sim-${{ github.run_id }}
+
+      - name: Check for MobAI simulator cache
+        id: simcache_check
+        if: always()
+        run: |
+          if [ -d "${{ runner.temp }}/mobai-cache" ] && [ -n "$(ls -A "${{ runner.temp }}/mobai-cache" 2>/dev/null)" ]; then
+            echo "exists=yes" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Save simulator cache fallback
+        if: always() && steps.simcache_check.outputs.exists == 'yes'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/mobai-cache
+          key: mobai-sim-${{ runner.os }}-iPhone15-${{ github.run_id }}
 
       # Installs the build on the simulator and publishes it to the MobAI app.
       # The step (and the job) stay running until the simulator is released
