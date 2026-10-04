@@ -29,12 +29,23 @@ class SensorMetricsUnitTest {
             cadenceSpm = 165f,
             motionIntensity = 4.2f,
             peakMotionIntensity = 8.1f,
-            isRunning = true
+            isRunning = true,
+            accumulatedDistanceMeters = 85.5f
         )
 
         assertEquals(120, cadence.steps)
         assertEquals(165f, cadence.cadenceSpm, 0.01f)
         assertTrue(cadence.isRunning)
+        assertEquals(85.5f, cadence.accumulatedDistanceMeters, 0.01f)
+    }
+
+    @Test
+    fun testStationaryGpsDataDefaults() {
+        val defaultGps = GpsData()
+        assertEquals(0.0f, defaultGps.totalDistanceMeters, 0.001f)
+        assertEquals(0.0f, defaultGps.speedMps, 0.001f)
+        assertEquals(0.0f, defaultGps.currentPaceMinPerKm, 0.001f)
+        assertFalse(defaultGps.isGpsFixed)
     }
 
     @Test
@@ -43,12 +54,14 @@ class SensorMetricsUnitTest {
             latitude = 37.7749,
             longitude = -122.4194,
             speedKmh = 12.0f,
-            totalDistanceMeters = 800f
+            totalDistanceMeters = 800f,
+            isGpsFixed = true
         )
         val cadence = CadenceData(
             steps = 650,
             cadenceSpm = 170f,
-            isRunning = true
+            isRunning = true,
+            accumulatedDistanceMeters = 520f
         )
         val gesture = HandoffGestureEvent(
             peakAcceleration = 21.5f,
@@ -68,6 +81,29 @@ class SensorMetricsUnitTest {
         assertEquals(1, metrics.gestureTriggerCount)
         assertEquals(650, metrics.cadence.steps)
         assertEquals(800f, metrics.gps.totalDistanceMeters, 0.01f)
+        assertEquals(800f, metrics.fusedDistanceMeters, 0.01f)
         assertEquals(21.5f, metrics.lastGesture?.peakAcceleration ?: 0f, 0.01f)
+    }
+
+    @Test
+    fun testIndoorFusedDistanceFallback() {
+        val gpsUnfixed = GpsData(
+            totalDistanceMeters = 0.0f,
+            isGpsFixed = false
+        )
+        val indoorCadence = CadenceData(
+            steps = 150,
+            cadenceSpm = 160f,
+            isRunning = true,
+            accumulatedDistanceMeters = 112.5f
+        )
+
+        val metrics = SensorMetrics(
+            gps = gpsUnfixed,
+            cadence = indoorCadence,
+            isTracking = true
+        )
+
+        assertEquals(112.5f, metrics.fusedDistanceMeters, 0.01f)
     }
 }

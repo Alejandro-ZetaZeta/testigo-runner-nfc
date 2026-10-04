@@ -10,8 +10,8 @@ import java.nio.charset.StandardCharsets
 /**
  * Host Card Emulation (HCE) service for the Relay Race.
  *
- * Responds to incoming NFC Readers (both iPhone CoreNFC and Android IsoDep readers)
- * when they select the Relay Baton AID: F072656C61793031.
+ * Responde de forma 100% automática a otros dispositivos (Android e iPhone)
+ * cuando seleccionan el AID del testigo de relevos: F072656C61793031.
  */
 class RelayBatonHceService : HostApduService() {
 
@@ -21,21 +21,20 @@ class RelayBatonHceService : HostApduService() {
 
     override fun processCommandApdu(commandApdu: ByteArray?, extras: Bundle?): ByteArray {
         if (commandApdu == null || commandApdu.isEmpty()) {
-            Log.w(TAG, "Received null or empty APDU command")
+            Log.w(TAG, "Comando APDU nulo o vacío recibido")
             return ApduConstants.STATUS_FAILED
         }
 
         val apduHex = commandApdu.toHexString()
-        Log.d(TAG, "Incoming APDU: $apduHex (length=${commandApdu.size})")
+        Log.d(TAG, "APDU entrante: $apduHex (longitud=${commandApdu.size})")
 
-        // 1. Check for SELECT AID Command
+        // 1. Verificar comando SELECT AID
         if (isSelectAidCommand(commandApdu)) {
-            Log.i(TAG, "AID Selected by NFC Reader! Ready for baton exchange.")
-            // Return STATUS_SUCCESS (90 00) acknowledging selection
+            Log.i(TAG, "AID del Testigo seleccionado por dispositivo lector remoto.")
             return ApduConstants.STATUS_SUCCESS
         }
 
-        // 2. Parse Instruction (INS)
+        // 2. Parsear Instrucción (INS)
         if (commandApdu.size < 4) {
             return ApduConstants.STATUS_FAILED
         }
@@ -46,38 +45,40 @@ class RelayBatonHceService : HostApduService() {
             ApduConstants.INS_PASS_BATON -> handlePassBatonCommand(commandApdu)
             ApduConstants.INS_PING -> ApduConstants.STATUS_SUCCESS
             else -> {
-                Log.w(TAG, "Unknown instruction: 0x%02X".format(ins))
+                Log.w(TAG, "Instrucción no reconocida: 0x%02X".format(ins))
                 ApduConstants.STATUS_UNKNOWN_CMD
             }
         }
     }
 
     /**
-     * Handles reader requesting the baton (Reader is waiting runner, this device is incoming runner).
+     * El dispositivo lector remoto (relevista en espera) solicita el testigo.
+     * Este dispositivo debe estar portando el testigo para entregarlo.
      */
     private fun handleGetBatonCommand(): ByteArray {
+        val isCarrying = BatonManager.isCarryingBaton.value
         val baton = BatonManager.currentBaton.value
-        return if (baton != null) {
+
+        return if (isCarrying && baton != null) {
             val jsonPayload = baton.toJsonString().toByteArray(StandardCharsets.UTF_8)
-            Log.i(TAG, "Transmitting baton to Reader: ${baton.toJsonString()}")
+            Log.i(TAG, "Entregando testigo a lector remoto vía GET_BATON: ${baton.toJsonString()}")
 
-            // Notify BatonManager of handoff
-            BatonManager.onBatonTransferredOut("Reader fetched baton")
+            // Notificar salida del testigo en BatonManager
+            BatonManager.onBatonTransferredOut("Lector remoto obtuvo el testigo vía APDU")
 
-            // Response = [Payload Bytes] + [90 00]
+            // Respuesta = [Bytes de Payload] + [90 00]
             jsonPayload + ApduConstants.STATUS_SUCCESS
         } else {
-            Log.w(TAG, "No active baton data available to send")
+            Log.w(TAG, "Solicitud GET_BATON rechazada: Este dispositivo no porta el testigo activo")
             ApduConstants.STATUS_FAILED
         }
     }
 
     /**
-     * Handles reader writing the baton (Reader is incoming runner, this device is waiting runner).
+     * El dispositivo lector remoto (corredor entrante) entrega el testigo a este dispositivo (relevista en espera).
      */
     private fun handlePassBatonCommand(commandApdu: ByteArray): ByteArray {
         try {
-            // APDU format: [CLA(1)] [INS(1)] [P1(1)] [P2(1)] [Lc(1)] [Data(Lc)] [Le(optional)]
             if (commandApdu.size < 5) return ApduConstants.STATUS_FAILED
             val lc = commandApdu[4].toInt() and 0xFF
             if (commandApdu.size < 5 + lc) return ApduConstants.STATUS_FAILED
@@ -87,22 +88,32 @@ class RelayBatonHceService : HostApduService() {
             val incomingBaton = BatonData.fromJsonString(jsonString)
 
             return if (incomingBaton != null) {
-                Log.i(TAG, "Received incoming baton from Reader: $jsonString")
+                val current = BatonManager.currentBaton.value
+
+                // Validar correspondencia de grupo de carrera
+                if (current != null && current.raceId.isNotBlank() && incomingBaton.raceId.isNotBlank() &&
+                    !incomingBaton.raceId.equals(current.raceId, ignoreCase = true)
+                ) {
+                    Log.e(TAG, "Carrera no coincide en HCE: ${incomingBaton.raceId} != ${current.raceId}")
+                    BatonManager.onHandshakeFailed("Carrera '${incomingBaton.raceId}' no coincide con local '${current.raceId}'")
+                    return ApduConstants.STATUS_FAILED
+                }
+
+                Log.i(TAG, "Testigo recibido con éxito vía PASS_BATON: $jsonString")
                 BatonManager.onBatonReceivedIn(incomingBaton)
                 ApduConstants.STATUS_SUCCESS
             } else {
-                Log.e(TAG, "Failed to parse incoming baton payload")
+                Log.e(TAG, "Fallo al parsear JSON del testigo entrante en HCE")
                 ApduConstants.STATUS_FAILED
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error handling PASS_BATON command", e)
+            Log.e(TAG, "Error procesando comando PASS_BATON", e)
             return ApduConstants.STATUS_FAILED
         }
     }
 
     private fun isSelectAidCommand(commandApdu: ByteArray): Boolean {
         if (commandApdu.size < 5) return false
-        // Header must match 00 A4 04 00
         val isHeaderMatch = commandApdu[0] == 0x00.toByte() &&
                 commandApdu[1] == 0xA4.toByte() &&
                 commandApdu[2] == 0x04.toByte() &&
@@ -121,10 +132,10 @@ class RelayBatonHceService : HostApduService() {
 
     override fun onDeactivated(reason: Int) {
         val reasonStr = when (reason) {
-            DEACTIVATION_LINK_LOSS -> "Link Lost (Device moved out of NFC field)"
-            DEACTIVATION_DESELECTED -> "Deselected (Another AID was selected)"
-            else -> "Reason: $reason"
+            DEACTIVATION_LINK_LOSS -> "Enlace perdido (dispositivo fuera de rango NFC)"
+            DEACTIVATION_DESELECTED -> "Deseleccionado"
+            else -> "Razón: $reason"
         }
-        Log.d(TAG, "NFC HCE Service deactivated: $reasonStr")
+        Log.d(TAG, "Servicio HCE desactivado: $reasonStr")
     }
 }

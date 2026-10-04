@@ -1,244 +1,284 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/bg_glass_card"
-    android:orientation="vertical"
-    android:padding="20dp">
+    android:background="@drawable/bg_glass_dialog"
+    android:fillViewport="true"
+    android:isScrollContainer="true"
+    android:overScrollMode="ifContentScrolls"
+    android:scrollbars="vertical">
 
-    <!-- Encabezado del Diálogo -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:orientation="vertical"
+        android:padding="20dp">
 
-        <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginEnd="8dp"
-            android:src="@drawable/ic_settings"
-            app:tint="@color/accent_cyan" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Configuración de Carrera"
-            android:textColor="@color/white"
-            android:textSize="18sp"
-            android:textStyle="bold" />
-    </LinearLayout>
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="Ajusta los parámetros de tu relevo y del testigo NFC."
-        android:textColor="@color/text_tertiary"
-        android:textSize="12sp" />
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_marginVertical="12dp"
-        android:background="@color/glass_card_stroke" />
-
-    <!-- Nombre del Corredor -->
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/tilRunnerName"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="10dp"
-        android:hint="Nombre del Corredor"
-        android:textColorHint="@color/text_tertiary"
-        app:boxStrokeColor="@color/accent_cyan"
-        app:hintTextColor="@color/accent_cyan">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etRunnerName"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="textPersonName"
-            android:textColor="@color/white"
-            android:textSize="14sp" />
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <!-- ID del Equipo -->
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/tilTeamId"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="10dp"
-        android:hint="ID del Equipo"
-        android:textColorHint="@color/text_tertiary"
-        app:boxStrokeColor="@color/accent_cyan"
-        app:hintTextColor="@color/accent_cyan">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etTeamId"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="textCapCharacters"
-            android:textColor="@color/white"
-            android:textSize="14sp" />
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <!-- ID de Carrera -->
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/tilRaceId"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="10dp"
-        android:hint="ID de Carrera"
-        android:textColorHint="@color/text_tertiary"
-        app:boxStrokeColor="@color/accent_cyan"
-        app:hintTextColor="@color/accent_cyan">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etRaceId"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="textCapCharacters"
-            android:textColor="@color/white"
-            android:textSize="14sp" />
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <!-- Selector de Etapa (Leg Index) -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
-        android:background="@drawable/bg_glass_metric_tile"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="10dp">
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Número de Etapa / Relevo"
-            android:textColor="@color/white"
-            android:textSize="13sp"
-            android:textStyle="bold" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnLegMinus"
-            android:layout_width="38dp"
-            android:layout_height="38dp"
-            android:background="@drawable/bg_glass_icon_button"
-            app:backgroundTint="@null"
-            android:insetLeft="0dp"
-            android:insetTop="0dp"
-            android:insetRight="0dp"
-            android:insetBottom="0dp"
-            android:padding="0dp"
-            android:text="-"
-            android:textColor="@color/white"
-            android:textSize="18sp"
-            app:cornerRadius="19dp" />
-
-        <TextView
-            android:id="@+id/tvLegIndexValue"
-            android:layout_width="44dp"
-            android:layout_height="wrap_content"
-            android:fontFamily="monospace"
-            android:gravity="center"
-            android:text="1"
-            android:textColor="@color/accent_cyan"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnLegPlus"
-            android:layout_width="38dp"
-            android:layout_height="38dp"
-            android:background="@drawable/bg_glass_icon_button"
-            app:backgroundTint="@null"
-            android:insetLeft="0dp"
-            android:insetTop="0dp"
-            android:insetRight="0dp"
-            android:insetBottom="0dp"
-            android:padding="0dp"
-            android:text="+"
-            android:textColor="@color/white"
-            android:textSize="18sp"
-            app:cornerRadius="19dp" />
-    </LinearLayout>
-
-    <!-- Switch de Portación Inicial -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        android:background="@drawable/bg_glass_metric_tile"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="10dp">
-
+        <!-- Encabezado del Diálogo Pre-Inicio -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginEnd="8dp"
+                android:src="@drawable/ic_settings"
+                app:tint="@color/accent_cyan" />
 
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="Portando el Testigo"
+                android:layout_weight="1"
+                android:text="Sincronización Pre-Inicio"
+                android:textColor="@color/white"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Sincroniza el ID de Grupo y asigna tu Etapa. La función se configura automáticamente según la etapa seleccionada."
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginVertical="12dp"
+            android:background="@color/glass_card_stroke" />
+
+        <!-- ID de Carrera / Grupo -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilRaceId"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:hint="ID de Carrera / Grupo (idéntico en el equipo)"
+            android:textColorHint="@color/text_secondary"
+            app:boxBackgroundColor="@color/dialog_input_box_bg"
+            app:boxStrokeColor="@color/accent_cyan"
+            app:hintTextColor="@color/accent_cyan">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etRaceId"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:imeOptions="actionNext"
+                android:inputType="textCapCharacters"
+                android:textColor="@color/white"
+                android:textSize="14sp" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- ID del Equipo -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilTeamId"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:hint="ID del Equipo"
+            android:textColorHint="@color/text_secondary"
+            app:boxBackgroundColor="@color/dialog_input_box_bg"
+            app:boxStrokeColor="@color/accent_cyan"
+            app:hintTextColor="@color/accent_cyan">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etTeamId"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:imeOptions="actionNext"
+                android:inputType="textCapCharacters"
+                android:textColor="@color/white"
+                android:textSize="14sp" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Nombre del Corredor -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilRunnerName"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:hint="Nombre del Corredor"
+            android:textColorHint="@color/text_secondary"
+            app:boxBackgroundColor="@color/dialog_input_box_bg"
+            app:boxStrokeColor="@color/accent_cyan"
+            app:hintTextColor="@color/accent_cyan">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etRunnerName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:imeOptions="actionDone"
+                android:inputType="textPersonName"
+                android:textColor="@color/white"
+                android:textSize="14sp" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Selector de Etapa (Leg Index) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/bg_glass_metric_tile"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="10dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Número de Etapa / Relevo"
                 android:textColor="@color/white"
                 android:textSize="13sp"
                 android:textStyle="bold" />
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnLegMinus"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_glass_icon_button"
+                app:backgroundTint="@null"
+                android:insetLeft="0dp"
+                android:insetTop="0dp"
+                android:insetRight="0dp"
+                android:insetBottom="0dp"
+                android:padding="0dp"
+                android:text="-"
+                android:textColor="@color/white"
+                android:textSize="18sp"
+                app:cornerRadius="19dp" />
+
             <TextView
-                android:id="@+id/tvCarryingDesc"
-                android:layout_width="wrap_content"
+                android:id="@+id/tvLegIndexValue"
+                android:layout_width="44dp"
                 android:layout_height="wrap_content"
-                android:text="Inicia la carrera con el testigo en mano"
-                android:textColor="@color/text_tertiary"
-                android:textSize="11sp" />
+                android:fontFamily="monospace"
+                android:gravity="center"
+                android:text="1"
+                android:textColor="@color/accent_cyan"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnLegPlus"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_glass_icon_button"
+                app:backgroundTint="@null"
+                android:insetLeft="0dp"
+                android:insetTop="0dp"
+                android:insetRight="0dp"
+                android:insetBottom="0dp"
+                android:padding="0dp"
+                android:text="+"
+                android:textColor="@color/white"
+                android:textSize="18sp"
+                app:cornerRadius="19dp" />
         </LinearLayout>
 
-        <com.google.android.material.materialswitch.MaterialSwitch
-            android:id="@+id/switchCarrying"
-            android:layout_width="wrap_content"
+        <!-- Tarjeta Dinámica de Rol Asignado (Liquid Glass Role Preview) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardRolePreview"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:checked="true"
-            app:thumbTint="@color/accent_green"
-            app:trackTint="@color/status_sprint_bg" />
-    </LinearLayout>
+            android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="@color/status_sprint_bg"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/status_sprint_border"
+            app:strokeWidth="1.2dp">
 
-    <!-- Botones de Acción -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="end"
-        android:orientation="horizontal">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnCancelSettings"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:id="@+id/ivRoleIcon"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_marginEnd="8dp"
+                        android:src="@drawable/ic_sprint"
+                        app:tint="@color/status_sprint_primary" />
+
+                    <TextView
+                        android:id="@+id/tvRoleTitle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="CORREDOR INICIAL (ETAPA 1)"
+                        android:textColor="@color/status_sprint_text"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvRoleBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_glass_badge"
+                        android:paddingHorizontal="6dp"
+                        android:paddingVertical="2dp"
+                        android:text="PORTADOR"
+                        android:textColor="@color/status_sprint_primary"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvRoleDesc"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="Inicia con el testigo en mano. Podrás pulsar 'INICIAR ETAPA' para arrancar la carrera."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Botones de Acción -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:text="Cancelar"
-            android:textColor="@color/text_secondary" />
+            android:layout_marginTop="4dp"
+            android:gravity="end"
+            android:orientation="horizontal">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnSaveSettings"
-            android:layout_width="wrap_content"
-            android:layout_height="44dp"
-            android:background="@drawable/bg_glass_button_outlined_cyan"
-            app:backgroundTint="@null"
-            android:paddingHorizontal="18dp"
-            android:text="Guardar Cambios"
-            android:textColor="@color/accent_cyan"
-            android:textStyle="bold"
-            app:cornerRadius="22dp" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCancelSettings"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="Cancelar"
+                android:textColor="@color/text_secondary" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSaveSettings"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_glass_button_outlined_cyan"
+                app:backgroundTint="@null"
+                android:paddingHorizontal="18dp"
+                android:text="Sincronizar y Guardar"
+                android:textColor="@color/accent_cyan"
+                android:textStyle="bold"
+                app:cornerRadius="22dp" />
+        </LinearLayout>
     </LinearLayout>
-</LinearLayout>
+</androidx.core.widget.NestedScrollView>

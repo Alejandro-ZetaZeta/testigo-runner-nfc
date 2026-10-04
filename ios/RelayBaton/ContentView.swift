@@ -60,12 +60,18 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showingSettings) {
             SettingsSheet(batonManager: batonManager)
+                .preferredColorScheme(.dark)
+                .sheetPresentationBackground()
         }
         .sheet(isPresented: $showingCalibration) {
             CalibrationSheet(motionManager: motionManager)
+                .preferredColorScheme(.dark)
+                .sheetPresentationBackground()
         }
         .sheet(isPresented: $showingSplits) {
             SplitsSheet(splits: locationManager.splits)
+                .preferredColorScheme(.dark)
+                .sheetPresentationBackground()
         }
         .alert(isPresented: $showAlert) {
             Alert(title: Text("Testigo de Relevos"), message: Text(alertMessage), dismissButton: .default(Text("Aceptar")))
@@ -583,47 +589,253 @@ struct SettingsSheet: View {
     @State private var teamId: String = ""
     @State private var raceId: String = ""
     @State private var legIndex: Int = 1
-    @State private var isCarrying: Bool = true
+
+    private var isInitialRunner: Bool {
+        legIndex == 1
+    }
 
     var body: some View {
         NavigationView {
-            Form {
-                Section(header: Text("Detalles del Corredor")) {
-                    TextField("Nombre del Corredor", text: $runnerName)
-                    TextField("ID del Equipo", text: $teamId)
-                    TextField("ID de Carrera", text: $raceId)
-                    Stepper("Número de Etapa: \(legIndex)", value: $legIndex, in: 1...10)
-                    Toggle("Portando el Testigo Inicialmente", isOn: $isCarrying)
-                }
+            ZStack {
+                // Fondo Liquid Glass con transparencia aceptable (~94% de opacidad para gran legibilidad y contraste)
+                Color(red: 0.05, green: 0.07, blue: 0.13).opacity(0.94)
+                    .ignoresSafeArea()
 
-                Section {
-                    Button("Guardar y Actualizar Testigo") {
-                        batonManager.currentRunnerName = runnerName
-                        batonManager.currentLegIndex = legIndex
-                        let baton = BatonData(
-                            raceId: raceId,
-                            teamId: teamId,
-                            legIndex: legIndex,
-                            runnerName: runnerName,
-                            signatureToken: "SIG-MANUAL-\(legIndex)"
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.08, green: 0.11, blue: 0.20).opacity(0.94),
+                        Color(red: 0.04, green: 0.06, blue: 0.11).opacity(0.96)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        // Encabezado
+                        HStack(spacing: 10) {
+                            Image(systemName: "gearshape.2.fill")
+                                .font(.title3)
+                                .foregroundColor(.cyan)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Sincronización Pre-Inicio")
+                                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                                    .foregroundColor(.white)
+                                Text("Sincroniza el ID de Grupo y asigna tu Etapa.")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(Color(white: 0.75))
+                            }
+                        }
+                        .padding(.top, 8)
+
+                        Divider().background(Color.white.opacity(0.2))
+
+                        // Campo: ID de Carrera / Grupo
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("ID DE CARRERA / GRUPO")
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .foregroundColor(.cyan)
+                            TextField("ID de Carrera", text: $raceId)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.white)
+                                .padding(12)
+                                .background(Color.white.opacity(0.08))
+                                .cornerRadius(10)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.cyan.opacity(0.4), lineWidth: 1)
+                                )
+                        }
+
+                        // Campo: ID del Equipo
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("ID DEL EQUIPO")
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .foregroundColor(.cyan)
+                            TextField("ID del Equipo", text: $teamId)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.white)
+                                .padding(12)
+                                .background(Color.white.opacity(0.08))
+                                .cornerRadius(10)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.cyan.opacity(0.4), lineWidth: 1)
+                                )
+                        }
+
+                        // Campo: Nombre del Corredor
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("NOMBRE DEL CORREDOR")
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .foregroundColor(.cyan)
+                            TextField("Nombre del Corredor", text: $runnerName)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.white)
+                                .padding(12)
+                                .background(Color.white.opacity(0.08))
+                                .cornerRadius(10)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.cyan.opacity(0.4), lineWidth: 1)
+                                )
+                        }
+
+                        // Selector de Etapa (Leg Index)
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("NÚMERO DE ETAPA / RELEVO")
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .foregroundColor(.cyan)
+
+                            HStack {
+                                Text("Etapa asignada")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundColor(.white)
+
+                                Spacer()
+
+                                Button(action: {
+                                    if legIndex > 1 {
+                                        legIndex -= 1
+                                        if runnerName.hasPrefix("Corredor ") {
+                                            runnerName = "Corredor \(legIndex)"
+                                        }
+                                    }
+                                }) {
+                                    Text("-")
+                                        .font(.system(size: 20, weight: .bold))
+                                        .frame(width: 36, height: 36)
+                                        .background(Color.white.opacity(0.12))
+                                        .foregroundColor(.white)
+                                        .clipShape(Circle())
+                                }
+
+                                Text("\(legIndex)")
+                                    .font(.system(size: 18, weight: .bold, design: .monospaced))
+                                    .foregroundColor(.cyan)
+                                    .frame(width: 36)
+
+                                Button(action: {
+                                    if legIndex < 12 {
+                                        legIndex += 1
+                                        if runnerName.hasPrefix("Corredor ") {
+                                            runnerName = "Corredor \(legIndex)"
+                                        }
+                                    }
+                                }) {
+                                    Text("+")
+                                        .font(.system(size: 20, weight: .bold))
+                                        .frame(width: 36, height: 36)
+                                        .background(Color.white.opacity(0.12))
+                                        .foregroundColor(.white)
+                                        .clipShape(Circle())
+                                }
+                            }
+                            .padding(12)
+                            .background(Color.white.opacity(0.06))
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                            )
+                        }
+
+                        // Tarjeta Dinámica de Rol Asignado
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: isInitialRunner ? "figure.run" : "wave.3.forward.circle.fill")
+                                    .foregroundColor(isInitialRunner ? .green : .orange)
+
+                                Text(isInitialRunner ? "CORREDOR INICIAL (ETAPA 1)" : "RELEVISTA EN ESPERA (ETAPA \(legIndex))")
+                                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                                    .foregroundColor(isInitialRunner ? Color(red: 0.4, green: 0.95, blue: 0.68) : Color(red: 1.0, green: 0.88, blue: 0.51))
+
+                                Spacer()
+
+                                Text(isInitialRunner ? "PORTADOR" : "EN ESPERA NFC")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background((isInitialRunner ? Color.green : Color.orange).opacity(0.25))
+                                    .foregroundColor(isInitialRunner ? .green : .orange)
+                                    .cornerRadius(6)
+                            }
+
+                            Text(isInitialRunner ? "Inicia con el testigo en mano. Podrás pulsar 'INICIAR CARRERA' manualmente." : "Inicio bloqueado. El cronómetro iniciará automáticamente al recibir el testigo vía NFC del corredor previo.")
+                                .font(.system(size: 11))
+                                .foregroundColor(Color(white: 0.8))
+                        }
+                        .padding(14)
+                        .background((isInitialRunner ? Color.green : Color.orange).opacity(0.15))
+                        .cornerRadius(14)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke((isInitialRunner ? Color.green : Color.orange).opacity(0.5), lineWidth: 1.2)
                         )
-                        batonManager.setBaton(baton, carrying: isCarrying)
-                        dismiss()
+
+                        // Botones de Acción
+                        HStack(spacing: 12) {
+                            Button(action: { dismiss() }) {
+                                Text("Cancelar")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(Color(white: 0.75))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(Color.white.opacity(0.08))
+                                    .cornerRadius(20)
+                            }
+
+                            Button(action: saveSettings) {
+                                Text("Sincronizar y Guardar")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(.black)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [Color.cyan, Color.mint],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .cornerRadius(20)
+                                    .shadow(color: Color.cyan.opacity(0.4), radius: 8, y: 2)
+                            }
+                        }
+                        .padding(.top, 10)
                     }
-                    .font(.headline)
-                    .foregroundColor(.cyan)
+                    .padding(20)
                 }
             }
-            .navigationTitle("Configuración de Carrera")
-            .navigationBarItems(trailing: Button("Listo") { dismiss() })
+            .navigationBarHidden(true)
             .onAppear {
                 runnerName = batonManager.currentRunnerName
                 teamId = batonManager.currentBaton?.teamId ?? "EQUIPO-ALFA"
                 raceId = batonManager.currentBaton?.raceId ?? "CARRERA-2026-ALFA"
                 legIndex = batonManager.currentLegIndex
-                isCarrying = batonManager.isCarryingBaton
             }
         }
+    }
+
+    private func saveSettings() {
+        let cleanRunner = runnerName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Corredor \(legIndex)" : runnerName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanTeam = teamId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "EQUIPO-ALFA" : teamId.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanRace = raceId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "CARRERA-2026-ALFA" : raceId.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        batonManager.currentRunnerName = cleanRunner
+        batonManager.currentLegIndex = legIndex
+
+        let baton = BatonData(
+            raceId: cleanRace,
+            teamId: cleanTeam,
+            legIndex: legIndex,
+            runnerName: cleanRunner,
+            signatureToken: "SIG-MANUAL-\(legIndex)"
+        )
+        batonManager.setBaton(baton, carrying: isInitialRunner)
+        dismiss()
     }
 }
 
@@ -634,49 +846,55 @@ struct CalibrationSheet: View {
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 24) {
-                Image(systemName: "scope")
-                    .font(.system(size: 60))
-                    .foregroundColor(.yellow)
-                    .padding(.top, 20)
+            ZStack {
+                Color(red: 0.05, green: 0.07, blue: 0.13).opacity(0.94)
+                    .ignoresSafeArea()
 
-                Text("Calibración de Sensores")
-                    .font(.title2.bold())
+                VStack(spacing: 24) {
+                    Image(systemName: "scope")
+                        .font(.system(size: 60))
+                        .foregroundColor(.yellow)
+                        .padding(.top, 20)
 
-                Text(statusMessage)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
+                    Text("Calibración de Sensores")
+                        .font(.title2.bold())
+                        .foregroundColor(.white)
 
-                if motionManager.isCalibrating {
-                    ProgressView(value: motionManager.calibrationProgress, total: 1.0)
-                        .progressViewStyle(LinearProgressViewStyle(tint: .yellow))
-                        .padding(.horizontal, 32)
-                }
+                    Text(statusMessage)
+                        .font(.subheadline)
+                        .foregroundColor(Color(white: 0.8))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
 
-                Spacer()
-
-                Button(action: {
-                    statusMessage = "Calibrando punto cero y ruido de sensores..."
-                    motionManager.calibrateSensors { success in
-                        statusMessage = "✅ ¡Sensores calibrados exitosamente!"
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                            dismiss()
-                        }
+                    if motionManager.isCalibrating {
+                        ProgressView(value: motionManager.calibrationProgress, total: 1.0)
+                            .progressViewStyle(LinearProgressViewStyle(tint: .yellow))
+                            .padding(.horizontal, 32)
                     }
-                }) {
-                    Text(motionManager.isCalibrating ? "Calibrando..." : "Iniciar Calibración")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.yellow)
-                        .foregroundColor(.black)
-                        .cornerRadius(12)
+
+                    Spacer()
+
+                    Button(action: {
+                        statusMessage = "Calibrando punto cero y ruido de sensores..."
+                        motionManager.calibrateSensors { success in
+                            statusMessage = "✅ ¡Sensores calibrados exitosamente!"
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                                dismiss()
+                            }
+                        }
+                    }) {
+                        Text(motionManager.isCalibrating ? "Calibrando..." : "Iniciar Calibración")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.yellow)
+                            .foregroundColor(.black)
+                            .cornerRadius(12)
+                    }
+                    .disabled(motionManager.isCalibrating)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 20)
                 }
-                .disabled(motionManager.isCalibrating)
-                .padding(.horizontal, 24)
-                .padding(.bottom, 20)
             }
             .navigationTitle("Calibrar")
             .navigationBarItems(trailing: Button("Cerrar") { dismiss() })
@@ -690,22 +908,45 @@ struct SplitsSheet: View {
 
     var body: some View {
         NavigationView {
-            List(splits) { split in
-                HStack {
-                    Text("Parcial #\(split.splitIndex)")
-                        .font(.headline)
-                    Spacer()
-                    VStack(alignment: .trailing) {
-                        Text(String(format: "%.0f m en %.1fs", split.splitDistanceMeters, split.timeInterval))
-                            .font(.subheadline)
-                        Text("Ritmo: \(split.paceString)")
-                            .font(.caption)
-                            .foregroundColor(.cyan)
+            ZStack {
+                Color(red: 0.05, green: 0.07, blue: 0.13).opacity(0.94)
+                    .ignoresSafeArea()
+
+                List(splits) { split in
+                    HStack {
+                        Text("Parcial #\(split.splitIndex)")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        Spacer()
+                        VStack(alignment: .trailing) {
+                            Text(String(format: "%.0f m en %.1fs", split.splitDistanceMeters, split.timeInterval))
+                                .font(.subheadline)
+                                .foregroundColor(Color(white: 0.85))
+                            Text("Ritmo: \(split.paceString)")
+                                .font(.caption)
+                                .foregroundColor(.cyan)
+                        }
                     }
+                    .listRowBackground(Color.white.opacity(0.06))
                 }
+                .scrollContentBackground(.hidden)
             }
             .navigationTitle("Tiempos Parciales")
             .navigationBarItems(trailing: Button("Listo") { dismiss() })
+        }
+    }
+}
+
+// MARK: - Extensiones de Apariencia Liquid Glass
+extension View {
+    @ViewBuilder
+    func sheetPresentationBackground() -> some View {
+        if #available(iOS 16.4, *) {
+            self.presentationBackground {
+                Color(red: 0.05, green: 0.07, blue: 0.13).opacity(0.94)
+            }
+        } else {
+            self
         }
     }
 }

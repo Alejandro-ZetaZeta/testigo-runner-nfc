@@ -3,6 +3,7 @@ package com.example.sensores_prueba1
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -17,6 +18,8 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.WindowManager
+import android.view.inputmethod.InputMethodManager
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import android.widget.ImageView
@@ -40,7 +43,6 @@ import com.example.sensores_prueba1.sensors.GpsTracker
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.Job
@@ -60,7 +62,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     // Controlador del Lector NFC y GPS
     private lateinit var relayBatonReader: RelayBatonReader
     private lateinit var gpsTracker: GpsTracker
-    private var isNfcReaderManualScanning = false
 
     // Gestión de Sensores
     private lateinit var sensorManager: SensorManager
@@ -122,7 +123,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var tvNfcTitle: TextView
     private lateinit var tvNfcSubtitle: TextView
     private lateinit var tvNfcHandoffLog: TextView
-    private lateinit var btnToggleNfcScan: MaterialButton
 
     private lateinit var btnStartPause: MaterialButton
     private lateinit var btnStopReset: MaterialButton
@@ -197,7 +197,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         tvNfcTitle = findViewById(R.id.tvNfcTitle)
         tvNfcSubtitle = findViewById(R.id.tvNfcSubtitle)
         tvNfcHandoffLog = findViewById(R.id.tvNfcHandoffLog)
-        btnToggleNfcScan = findViewById(R.id.btnToggleNfcScan)
 
         btnStartPause = findViewById(R.id.btnStartPause)
         btnStopReset = findViewById(R.id.btnStopReset)
@@ -310,20 +309,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             performTactileClick()
             triggerManualBatonHandoff()
         }
-
-        btnToggleNfcScan.setOnClickListener {
-            performTactileClick()
-            toggleManualNfcScanning()
-        }
     }
 
     // ==========================================
-    // DIÁLOGOS DE CONFIGURACIÓN Y CALIBRACIÓN
+    // SINCRONIZACIÓN PRE-INICIO Y CALIBRACIÓN
     // ==========================================
 
     private fun showRaceSettingsDialog() {
         val currentBaton = BatonManager.currentBaton.value
-        val isCarrying = BatonManager.isCarryingBaton.value
 
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_race_settings, null)
         val etRunnerName = dialogView.findViewById<TextInputEditText>(R.id.etRunnerName)
@@ -332,7 +325,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val tvLegIndexValue = dialogView.findViewById<TextView>(R.id.tvLegIndexValue)
         val btnLegMinus = dialogView.findViewById<MaterialButton>(R.id.btnLegMinus)
         val btnLegPlus = dialogView.findViewById<MaterialButton>(R.id.btnLegPlus)
-        val switchCarrying = dialogView.findViewById<MaterialSwitch>(R.id.switchCarrying)
+
+        val cardRolePreview = dialogView.findViewById<MaterialCardView>(R.id.cardRolePreview)
+        val ivRoleIcon = dialogView.findViewById<ImageView>(R.id.ivRoleIcon)
+        val tvRoleTitle = dialogView.findViewById<TextView>(R.id.tvRoleTitle)
+        val tvRoleBadge = dialogView.findViewById<TextView>(R.id.tvRoleBadge)
+        val tvRoleDesc = dialogView.findViewById<TextView>(R.id.tvRoleDesc)
+
         val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancelSettings)
         val btnSave = dialogView.findViewById<MaterialButton>(R.id.btnSaveSettings)
 
@@ -340,20 +339,51 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         etRunnerName.setText(currentBaton?.runnerName ?: "Corredor 1")
         etTeamId.setText(currentBaton?.teamId ?: "EQUIPO-ALFA")
         etRaceId.setText(currentBaton?.raceId ?: "CARRERA-2026-ALFA")
-        tvLegIndexValue.text = selectedLeg.toString()
-        switchCarrying.isChecked = isCarrying
+
+        fun updateRoleCard(leg: Int) {
+            tvLegIndexValue.text = leg.toString()
+            if (leg == 1) {
+                cardRolePreview.setCardBackgroundColor(ContextCompat.getColor(this, R.color.status_sprint_bg))
+                cardRolePreview.strokeColor = ContextCompat.getColor(this, R.color.status_sprint_border)
+                ivRoleIcon.setImageResource(R.drawable.ic_sprint)
+                ivRoleIcon.setColorFilter(ContextCompat.getColor(this, R.color.status_sprint_primary))
+                tvRoleTitle.text = "CORREDOR INICIAL (ETAPA 1)"
+                tvRoleTitle.setTextColor(ContextCompat.getColor(this, R.color.status_sprint_text))
+                tvRoleBadge.text = "PORTADOR"
+                tvRoleBadge.setTextColor(ContextCompat.getColor(this, R.color.status_sprint_primary))
+                tvRoleDesc.text = "Inicia con el testigo en mano. Único corredor que puede presionar 'INICIAR ETAPA' manualmente."
+            } else {
+                cardRolePreview.setCardBackgroundColor(ContextCompat.getColor(this, R.color.status_wait_bg))
+                cardRolePreview.strokeColor = ContextCompat.getColor(this, R.color.status_wait_border)
+                ivRoleIcon.setImageResource(R.drawable.ic_nfc_tap)
+                ivRoleIcon.setColorFilter(ContextCompat.getColor(this, R.color.status_wait_primary))
+                tvRoleTitle.text = "RELEVISTA EN ESPERA (ETAPA $leg)"
+                tvRoleTitle.setTextColor(ContextCompat.getColor(this, R.color.status_wait_text))
+                tvRoleBadge.text = "EN ESPERA NFC"
+                tvRoleBadge.setTextColor(ContextCompat.getColor(this, R.color.status_wait_primary))
+                tvRoleDesc.text = "Inicio bloqueado. El cronómetro y la carrera iniciarán 100% AUTOMÁTICO al recibir el testigo vía NFC del corredor previo."
+            }
+        }
+
+        updateRoleCard(selectedLeg)
 
         btnLegMinus.setOnClickListener {
             if (selectedLeg > 1) {
                 selectedLeg--
-                tvLegIndexValue.text = selectedLeg.toString()
+                updateRoleCard(selectedLeg)
+                if (etRunnerName.text?.toString()?.startsWith("Corredor ") == true) {
+                    etRunnerName.setText("Corredor $selectedLeg")
+                }
             }
         }
 
         btnLegPlus.setOnClickListener {
             if (selectedLeg < 12) {
                 selectedLeg++
-                tvLegIndexValue.text = selectedLeg.toString()
+                updateRoleCard(selectedLeg)
+                if (etRunnerName.text?.toString()?.startsWith("Corredor ") == true) {
+                    etRunnerName.setText("Corredor $selectedLeg")
+                }
             }
         }
 
@@ -362,28 +392,36 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .setCancelable(true)
             .create()
 
+        alertDialog.window?.apply {
+            setBackgroundDrawableResource(android.R.color.transparent)
+            setDimAmount(0.65f)
+            setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        }
+
         btnCancel.setOnClickListener {
+            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+            imm?.hideSoftInputFromWindow(dialogView.windowToken, 0)
             alertDialog.dismiss()
         }
 
         btnSave.setOnClickListener {
+            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+            imm?.hideSoftInputFromWindow(dialogView.windowToken, 0)
+
             val runner = etRunnerName.text?.toString()?.trim().takeUnless { it.isNullOrEmpty() } ?: "Corredor $selectedLeg"
             val team = etTeamId.text?.toString()?.trim().takeUnless { it.isNullOrEmpty() } ?: "EQUIPO-ALFA"
             val race = etRaceId.text?.toString()?.trim().takeUnless { it.isNullOrEmpty() } ?: "CARRERA-2026-ALFA"
-            val carrying = switchCarrying.isChecked
 
-            val updatedBaton = BatonData(
+            BatonManager.setupGroupRunner(
                 raceId = race,
                 teamId = team,
-                legIndex = selectedLeg,
                 runnerName = runner,
-                timestampMs = System.currentTimeMillis(),
-                signatureToken = "SIG-CONF-$selectedLeg-${System.currentTimeMillis() % 1000}"
+                legIndex = selectedLeg
             )
 
-            BatonManager.updateBaton(updatedBaton, carrying = carrying)
             performTactileClick()
-            Toast.makeText(this, "✅ Configuración de carrera guardada", Toast.LENGTH_SHORT).show()
+            val roleText = if (selectedLeg == 1) "Corredor Inicial (Etapa 1)" else "Relevista en Espera (Etapa $selectedLeg)"
+            Toast.makeText(this, "✅ Sincronizado: $roleText", Toast.LENGTH_SHORT).show()
             alertDialog.dismiss()
         }
 
@@ -404,6 +442,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .setView(dialogView)
             .setCancelable(false)
             .create()
+
+        alertDialog.window?.apply {
+            setBackgroundDrawableResource(android.R.color.transparent)
+            setDimAmount(0.65f)
+            setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        }
 
         btnCancel.setOnClickListener {
             calibrationJob?.cancel()
@@ -486,7 +530,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 launch {
                     BatonManager.isCarryingBaton.collect { isCarrying ->
                         updateCarryingBatonUI(isCarrying)
-                        handleNfcModeForBatonState(isCarrying)
                     }
                 }
 
@@ -506,35 +549,62 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun updateCarryingBatonUI(isCarrying: Boolean) {
+        val baton = BatonManager.currentBaton.value
+        val leg = baton?.legIndex ?: 1
+
         if (isCarrying) {
             // EN SPRINT CON EL TESTIGO (VERDE)
             cardBatonStatus.setCardBackgroundColor(ContextCompat.getColor(this, R.color.status_sprint_bg))
             cardBatonStatus.strokeColor = ContextCompat.getColor(this, R.color.status_sprint_border)
             ivBatonStatusIcon.setImageResource(R.drawable.ic_sprint)
             ivBatonStatusIcon.setColorFilter(ContextCompat.getColor(this, R.color.status_sprint_primary))
-            tvBatonStatusTitle.text = "PORTANDO EL TESTIGO (EN CARRERA)"
+            tvBatonStatusTitle.text = "PORTANDO EL TESTIGO (ETAPA $leg)"
             tvBatonStatusTitle.setTextColor(ContextCompat.getColor(this, R.color.status_sprint_text))
-            tvBatonStatusDesc.text = "Tienes el testigo. ¡Corre hacia la zona de traspaso!"
+            tvBatonStatusDesc.text = "Tienes el testigo activo. Al llegar al relevo, acerca los teléfonos para transferirlo."
 
-            tvNfcTitle.text = "Listo para traspasar el testigo"
-            tvNfcSubtitle.text = "HCE Activo • Acerca el teléfono al receptor para pasar"
+            tvNfcTitle.text = "NFC Automático: Emisor HCE Activo"
+            tvNfcSubtitle.text = "Emulación de tarjeta HCE en segundo plano • Acerca el dispositivo al relevista"
             tvNfcSubtitle.setTextColor(ContextCompat.getColor(this, R.color.accent_green))
-
-            stopPulseAnimation()
         } else {
             // ESPERANDO EL TESTIGO (ÁMBAR)
             cardBatonStatus.setCardBackgroundColor(ContextCompat.getColor(this, R.color.status_wait_bg))
             cardBatonStatus.strokeColor = ContextCompat.getColor(this, R.color.status_wait_border)
             ivBatonStatusIcon.setImageResource(R.drawable.ic_nfc_tap)
             ivBatonStatusIcon.setColorFilter(ContextCompat.getColor(this, R.color.status_wait_primary))
-            tvBatonStatusTitle.text = "ESPERANDO EL TESTIGO (LISTO PARA ESCANEAR)"
+            tvBatonStatusTitle.text = "ESPERANDO TESTIGO (ETAPA $leg)"
             tvBatonStatusTitle.setTextColor(ContextCompat.getColor(this, R.color.status_wait_text))
-            tvBatonStatusDesc.text = "Esperando al corredor entrante. Acerca los teléfonos dorso con dorso."
+            tvBatonStatusDesc.text = "En espera de relevo. Mantén el teléfono listo; el cronómetro arrancará solo al recibir el testigo."
 
-            tvNfcTitle.text = "Escaneando testigo entrante"
-            tvNfcSubtitle.text = "Lector NFC Activo • En espera para el traspaso"
+            tvNfcTitle.text = "NFC Automático: Escaneando Testigo"
+            tvNfcSubtitle.text = "Lector NFC activo en segundo plano • El cronómetro iniciará solo"
             tvNfcSubtitle.setTextColor(ContextCompat.getColor(this, R.color.accent_amber))
+        }
 
+        updateNfcRoleAndScanning(isCarrying)
+        updateControlsForState()
+    }
+
+    private fun updateNfcRoleAndScanning(isCarrying: Boolean) {
+        if (!relayBatonReader.isNfcAvailable()) {
+            tvNfcSubtitle.text = "⚠️ NFC no disponible en este dispositivo"
+            tvNfcSubtitle.setTextColor(ContextCompat.getColor(this, R.color.accent_amber))
+            return
+        }
+        if (!relayBatonReader.isNfcEnabled()) {
+            tvNfcSubtitle.text = "⚠️ NFC apagado • Actívalo en Ajustes de Android"
+            tvNfcSubtitle.setTextColor(ContextCompat.getColor(this, R.color.accent_amber))
+            return
+        }
+
+        relayBatonReader.setPreferredHceService(this)
+
+        if (isCarrying) {
+            // Portador: HCE en modo escucha puro; se detiene el lector para evitar colisión RF entre teléfonos
+            relayBatonReader.stopScanning()
+            stopPulseAnimation()
+        } else {
+            // Relevista en espera: Lector NFC activado escaneando activamente al portador
+            relayBatonReader.startScanning()
             startPulseAnimation()
         }
     }
@@ -553,50 +623,70 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             tvRunnerName.text = "Sin Corredor"
             tvBatonDetails.text = "Sin Datos de Testigo"
         }
+        updateControlsForState()
     }
 
-    private fun handleNfcModeForBatonState(isCarrying: Boolean) {
-        if (!isCarrying) {
-            relayBatonReader.startScanning()
-            isNfcReaderManualScanning = true
-            btnToggleNfcScan.text = "Lector NFC: Activo (Toca para detener)"
-            btnToggleNfcScan.setBackgroundResource(R.drawable.bg_glass_button_prominent_amber)
-            btnToggleNfcScan.backgroundTintList = null
-            btnToggleNfcScan.setTextColor(ContextCompat.getColor(this, R.color.black))
-            btnToggleNfcScan.iconTint = ContextCompat.getColorStateList(this, R.color.black)
-        } else {
-            if (isNfcReaderManualScanning) {
-                relayBatonReader.stopScanning()
-                isNfcReaderManualScanning = false
+    private fun updateControlsForState() {
+        val isCarrying = BatonManager.isCarryingBaton.value
+        val baton = BatonManager.currentBaton.value
+        val leg = baton?.legIndex ?: 1
+
+        when (timerState) {
+            TimerState.RUNNING -> {
+                btnStartPause.isEnabled = true
+                btnStartPause.text = "PAUSAR ETAPA"
+                btnStartPause.setIconResource(R.drawable.ic_pause)
+                btnStartPause.setBackgroundResource(R.drawable.bg_glass_button_prominent_amber)
+                btnStartPause.backgroundTintList = null
+                btnStartPause.setTextColor(ContextCompat.getColor(this, R.color.black))
+                btnStartPause.iconTint = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.black))
+
+                tvTimerStatus.text = "EN CARRERA"
+                tvTimerStatus.setTextColor(ContextCompat.getColor(this, R.color.status_sprint_primary))
+                tvTimerSubtext.text = "Cronómetro activo • Transmitiendo telemetría en vivo"
             }
-            btnToggleNfcScan.text = "Iniciar Lector NFC (Escaneo manual)"
-            btnToggleNfcScan.setBackgroundResource(R.drawable.bg_glass_button_outlined_cyan)
-            btnToggleNfcScan.backgroundTintList = null
-            btnToggleNfcScan.setTextColor(ContextCompat.getColor(this, R.color.accent_cyan))
-            btnToggleNfcScan.iconTint = ContextCompat.getColorStateList(this, R.color.accent_cyan)
-        }
-    }
+            TimerState.PAUSED -> {
+                btnStartPause.isEnabled = true
+                btnStartPause.text = "REANUDAR ETAPA"
+                btnStartPause.setIconResource(R.drawable.ic_play)
+                btnStartPause.setBackgroundResource(R.drawable.bg_glass_button_prominent_green)
+                btnStartPause.backgroundTintList = null
+                btnStartPause.setTextColor(ContextCompat.getColor(this, R.color.black))
+                btnStartPause.iconTint = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.black))
 
-    private fun toggleManualNfcScanning() {
-        if (isNfcReaderManualScanning) {
-            relayBatonReader.stopScanning()
-            isNfcReaderManualScanning = false
-            btnToggleNfcScan.text = "Iniciar Lector NFC (Escaneo manual)"
-            btnToggleNfcScan.setBackgroundResource(R.drawable.bg_glass_button_outlined_cyan)
-            btnToggleNfcScan.backgroundTintList = null
-            btnToggleNfcScan.setTextColor(ContextCompat.getColor(this, R.color.accent_cyan))
-            btnToggleNfcScan.iconTint = ContextCompat.getColorStateList(this, R.color.accent_cyan)
-            tvNfcHandoffLog.text = "Lector NFC pausado manualmente"
-        } else {
-            relayBatonReader.startScanning()
-            isNfcReaderManualScanning = true
-            btnToggleNfcScan.text = "Lector NFC: Activo (Toca para detener)"
-            btnToggleNfcScan.setBackgroundResource(R.drawable.bg_glass_button_prominent_amber)
-            btnToggleNfcScan.backgroundTintList = null
-            btnToggleNfcScan.setTextColor(ContextCompat.getColor(this, R.color.black))
-            btnToggleNfcScan.iconTint = ContextCompat.getColorStateList(this, R.color.black)
-            tvNfcHandoffLog.text = "Lector NFC escaneando etiquetas ISO-DEP cercanas..."
-            startPulseAnimation()
+                tvTimerStatus.text = "PAUSADO"
+                tvTimerStatus.setTextColor(ContextCompat.getColor(this, R.color.accent_amber))
+                tvTimerSubtext.text = "Cronómetro pausado"
+            }
+            TimerState.STOPPED -> {
+                if (isCarrying) {
+                    // Portador (Etapa 1) -> Botón habilitado para inicio manual
+                    btnStartPause.isEnabled = true
+                    btnStartPause.text = "INICIAR ETAPA"
+                    btnStartPause.setIconResource(R.drawable.ic_play)
+                    btnStartPause.setBackgroundResource(R.drawable.bg_glass_button_prominent_green)
+                    btnStartPause.backgroundTintList = null
+                    btnStartPause.setTextColor(ContextCompat.getColor(this, R.color.black))
+                    btnStartPause.iconTint = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.black))
+
+                    tvTimerStatus.text = "LISTO"
+                    tvTimerStatus.setTextColor(ContextCompat.getColor(this, R.color.accent_cyan))
+                    tvTimerSubtext.text = "Presiona INICIAR para comenzar la carrera con el testigo"
+                } else {
+                    // Relevista en espera (Etapa 2+) -> Botón BLOQUEADO, inicio automático por NFC
+                    btnStartPause.isEnabled = false
+                    btnStartPause.text = "ESPERANDO TESTIGO NFC..."
+                    btnStartPause.setIconResource(R.drawable.ic_nfc_tap)
+                    btnStartPause.setBackgroundResource(R.drawable.bg_glass_button_locked_waiting)
+                    btnStartPause.backgroundTintList = null
+                    btnStartPause.setTextColor(ContextCompat.getColor(this, R.color.status_wait_text))
+                    btnStartPause.iconTint = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.status_wait_text))
+
+                    tvTimerStatus.text = "EN ESPERA"
+                    tvTimerStatus.setTextColor(ContextCompat.getColor(this, R.color.accent_amber))
+                    tvTimerSubtext.text = "Bloqueado: La etapa arrancará automáticamente al recibir el testigo por NFC."
+                }
+            }
         }
     }
 
@@ -608,25 +698,26 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 tvNfcHandoffLog.text = "🎉 ¡Traspaso completado! Testigo transferido a la Etapa ${event.baton.legIndex + 1}"
                 tvNfcHandoffLog.setTextColor(ContextCompat.getColor(this, R.color.status_sprint_text))
                 pauseRaceTimer()
-                tvTimerSubtext.text = "¡Etapa ${event.baton.legIndex} finalizada! Parcial guardado."
-                Toast.makeText(this, "⚡ ¡Testigo traspasado con éxito!", Toast.LENGTH_SHORT).show()
+                tvTimerSubtext.text = "¡Etapa ${event.baton.legIndex} finalizada! Testigo entregado con éxito."
+                Toast.makeText(this, "⚡ ¡Testigo entregado con éxito!", Toast.LENGTH_LONG).show()
             }
             is HandoffEvent.BatonReceived -> {
                 playSuccessTone()
                 vibrateBatonReceived()
-                tvNfcHandoffLog.text = "🎉 ¡Testigo recibido! Etapa ${event.baton.legIndex} activa: ¡CORRE!"
+                tvNfcHandoffLog.text = "🔥 ¡Testigo recibido! Etapa ${event.baton.legIndex} activa: ¡CORRE!"
                 tvNfcHandoffLog.setTextColor(ContextCompat.getColor(this, R.color.accent_green))
                 if (timerState != TimerState.RUNNING) {
                     startRaceTimer()
                 }
-                tvTimerSubtext.text = "¡Etapa ${event.baton.legIndex} en progreso! ¡Corre!"
-                Toast.makeText(this, "🔥 ¡Testigo recibido! ¡Adelante!", Toast.LENGTH_SHORT).show()
+                tvTimerSubtext.text = "¡Etapa ${event.baton.legIndex} en progreso! ¡Corre a la zona de relevo!"
+                Toast.makeText(this, "🔥 ¡Testigo recibido! ¡Cronómetro iniciado automáticamente!", Toast.LENGTH_LONG).show()
             }
             is HandoffEvent.HandshakeError -> {
                 playTone(ToneGenerator.TONE_PROP_NACK, 250)
                 vibrateError()
                 tvNfcHandoffLog.text = "⚠️ Evento NFC: ${event.reason}"
                 tvNfcHandoffLog.setTextColor(ContextCompat.getColor(this, R.color.accent_amber))
+                Toast.makeText(this, "⚠️ ${event.reason}", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -643,15 +734,16 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 timestampMs = System.currentTimeMillis(),
                 signatureToken = "SIG-ETAPA$nextLeg-${System.currentTimeMillis() % 10000}"
             )
-            BatonManager.onBatonTransferredOut("Activación manual por botón")
+            BatonManager.onBatonTransferredOut("Traspaso manual por botón")
             BatonManager.updateBaton(updatedBaton, carrying = false)
             Toast.makeText(this, "¡Testigo pasado al Corredor $nextLeg!", Toast.LENGTH_SHORT).show()
         } else if (current != null) {
             val updatedBaton = current.copy(
-                timestampMs = System.currentTimeMillis()
+                timestampMs = System.currentTimeMillis(),
+                signatureToken = "SIG-RECV-${System.currentTimeMillis() % 10000}"
             )
             BatonManager.onBatonReceivedIn(updatedBaton)
-            Toast.makeText(this, "¡Testigo recibido! Listo para correr.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "¡Testigo recibido! Iniciando etapa...", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -662,16 +754,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun startRaceTimer() {
         timerState = TimerState.RUNNING
         timerStartTime = SystemClock.elapsedRealtime()
-        tvTimerStatus.text = "EN CARRERA"
-        tvTimerStatus.setTextColor(ContextCompat.getColor(this, R.color.status_sprint_primary))
-        tvTimerSubtext.text = "Cronómetro activo • Transmitiendo telemetría"
-
-        btnStartPause.text = "PAUSAR ETAPA"
-        btnStartPause.setIconResource(R.drawable.ic_pause)
-        btnStartPause.setBackgroundResource(R.drawable.bg_glass_button_prominent_amber)
-        btnStartPause.backgroundTintList = null
-        btnStartPause.setTextColor(ContextCompat.getColor(this, R.color.black))
-        btnStartPause.iconTint = ContextCompat.getColorStateList(this, R.color.black)
+        updateControlsForState()
 
         gpsTracker.startTracking()
 
@@ -693,17 +776,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         timerJob?.cancel()
 
         gpsTracker.stopTracking()
-
-        tvTimerStatus.text = "PAUSADO"
-        tvTimerStatus.setTextColor(ContextCompat.getColor(this, R.color.accent_amber))
-        tvTimerSubtext.text = "Cronómetro pausado"
-
-        btnStartPause.text = "REANUDAR ETAPA"
-        btnStartPause.setIconResource(R.drawable.ic_play)
-        btnStartPause.setBackgroundResource(R.drawable.bg_glass_button_prominent_green)
-        btnStartPause.backgroundTintList = null
-        btnStartPause.setTextColor(ContextCompat.getColor(this, R.color.black))
-        btnStartPause.iconTint = ContextCompat.getColorStateList(this, R.color.black)
+        updateControlsForState()
     }
 
     private fun resetRace() {
@@ -719,17 +792,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         lastStepDetectedTime = 0L
         gpsTracker.reset()
 
-        tvTimerStatus.text = "LISTO"
-        tvTimerStatus.setTextColor(ContextCompat.getColor(this, R.color.accent_cyan))
-        tvTimerSubtext.text = "Presiona INICIAR para comenzar el cronometraje"
-
-        btnStartPause.text = "INICIAR ETAPA"
-        btnStartPause.setIconResource(R.drawable.ic_play)
-        btnStartPause.setBackgroundResource(R.drawable.bg_glass_button_prominent_green)
-        btnStartPause.backgroundTintList = null
-        btnStartPause.setTextColor(ContextCompat.getColor(this, R.color.black))
-        btnStartPause.iconTint = ContextCompat.getColorStateList(this, R.color.black)
-
+        updateControlsForState()
         updateMetricsUI(cadence = 0, distanceMeters = 0f, paceMinutesPerKm = 0f, steps = 0)
     }
 
@@ -828,24 +891,19 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     /**
      * Calcula la longitud de zancada dinámica (m) según cadencia e intensidad del movimiento.
-     * Si se corre en un espacio pequeño o en el sitio, evita acumular 50m falsos.
      */
     private fun calculateDynamicStride(cadence: Float, dynamicAccel: Float): Float {
         return when {
             cadence < 95f -> {
-                // Pasos lentos / desplazamiento mínimo en reposo
                 0.28f + (dynamicAccel * 0.04f).coerceIn(0f, 0.12f)
             }
             cadence in 95f..130f -> {
-                // Trote suave / trote en el sitio en espacios reducidos / caminata
                 0.38f + (dynamicAccel * 0.06f).coerceIn(0f, 0.18f)
             }
             cadence in 130f..165f -> {
-                // Trote en carrera activa
                 0.55f + (dynamicAccel * 0.08f).coerceIn(0f, 0.22f)
             }
             else -> {
-                // Sprint a máxima velocidad
                 0.75f + (dynamicAccel * 0.10f).coerceIn(0f, 0.30f)
             }
         }.coerceIn(0.20f, 1.20f)
@@ -854,7 +912,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun updateCadenceAndTelemetry() {
         val now = System.currentTimeMillis()
 
-        // Decaimiento suave si no hay nuevos pasos
         val timeSinceLastStep = now - lastStepDetectedTime
         if (lastStepDetectedTime > 0L) {
             if (timeSinceLastStep > 2400L) {
@@ -870,7 +927,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         val currentCadenceInt = smoothedCadence.toInt()
 
-        // Si hay fijación GPS con alta precisión exterior (>3m acumulados), usa GPS real; si no, usa zancada adaptativa interior
         val gpsData = gpsTracker.gpsFlow.value
         val finalDistance = if (gpsData.isGpsFixed && gpsData.totalDistanceMeters > 3.0f) {
             gpsData.totalDistanceMeters
@@ -878,7 +934,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             accumulatedIndoorDistanceMeters
         }
 
-        // Velocidad estimada en m/s
         val currentStride = calculateDynamicStride(smoothedCadence, abs(lastAccMagnitude - baselineGravity))
         val speedMps = if (gpsData.isGpsFixed && gpsData.speedMps > 0.4f) {
             gpsData.speedMps
@@ -1039,21 +1094,20 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     // ==========================================
-    // CICLO DE VIDA
+    // CICLO DE VIDA (NFC 100% AUTOMÁTICO Y ADAPTATIVO)
     // ==========================================
 
     override fun onResume() {
         super.onResume()
         registerSensors()
-        if (!BatonManager.isCarryingBaton.value || isNfcReaderManualScanning) {
-            relayBatonReader.startScanning()
-            startPulseAnimation()
-        }
+        // Configurar NFC según el rol actual (Portador HCE vs Relevista Lector)
+        updateNfcRoleAndScanning(BatonManager.isCarryingBaton.value)
     }
 
     override fun onPause() {
         super.onPause()
         relayBatonReader.stopScanning()
+        relayBatonReader.unsetPreferredHceService(this)
         stopPulseAnimation()
         unregisterSensors()
     }

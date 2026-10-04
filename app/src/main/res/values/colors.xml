@@ -16,6 +16,8 @@
     <color name="bg_card">#B310182A</color>
     <color name="bg_card_elevated">#CC16223D</color>
     <color name="bg_card_stroke">#33FFFFFF</color>
+    <color name="bg_dialog_glass">#F20B111E</color>
+    <color name="dialog_input_box_bg">#2616223D</color>
 
     <!-- Specular Highlights & Glass Rims -->
     <color name="glass_surface">#B310182A</color>

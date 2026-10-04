@@ -29,7 +29,30 @@ data class SensorMetrics(
     val elapsedSeconds: Long = 0L,
     val estimatedCaloriesKcal: Float = 0f,
     val timestampMs: Long = System.currentTimeMillis()
-)
+) {
+    /**
+     * Fused distance: If high-accuracy GPS has accumulated genuine outdoor displacement (> 3.0m),
+     * use GPS distance; otherwise use adaptive indoor stride distance.
+     */
+    val fusedDistanceMeters: Float
+        get() = if (gps.isGpsFixed && gps.totalDistanceMeters > 3.0f) {
+            gps.totalDistanceMeters
+        } else {
+            cadence.accumulatedDistanceMeters
+        }
+
+    /**
+     * Fused instant speed in m/s.
+     */
+    val speedMps: Float
+        get() = if (gps.isGpsFixed && gps.speedMps >= 0.5f) {
+            gps.speedMps
+        } else if (cadence.cadenceSpm >= 40f) {
+            (cadence.cadenceSpm / 60.0f) * 0.55f
+        } else {
+            0f
+        }
+}
 
 /**
  * Centralized Sensor Fusion Manager that coordinates [CadenceDetector], [HandoffGestureDetector],
@@ -154,7 +177,12 @@ class SensorFusionManager(private val context: Context) {
     }
 
     private fun updateMetricsState(gps: GpsData, cadence: CadenceData) {
-        val calories = estimateCalories(gps.totalDistanceMeters, cadence.steps, elapsedSeconds)
+        val effectiveDistance = if (gps.isGpsFixed && gps.totalDistanceMeters > 3.0f) {
+            gps.totalDistanceMeters
+        } else {
+            cadence.accumulatedDistanceMeters
+        }
+        val calories = estimateCalories(effectiveDistance, cadence.steps, elapsedSeconds)
 
         _metrics.value = SensorMetrics(
             gps = gps,
@@ -174,7 +202,7 @@ class SensorFusionManager(private val context: Context) {
     private fun estimateCalories(distanceMeters: Float, steps: Int, seconds: Long): Float {
         if (seconds == 0L) return 0f
         val distanceKm = distanceMeters / 1000f
-        // Standard running burns ~1.036 kcal per kg per km (~72 kcal per km for 70kg)
+        // Standard running burns ~1.036 kcal per kg per km (~72.5 kcal per km for 70kg)
         val distanceCalories = distanceKm * 72.5f
         // Step backup (approx 0.04 kcal/step)
         val stepCalories = steps * 0.04f

@@ -1,120 +1,129 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/bg_glass_card"
-    android:orientation="vertical"
-    android:padding="20dp">
+    android:background="@drawable/bg_glass_dialog"
+    android:fillViewport="true"
+    android:isScrollContainer="true"
+    android:overScrollMode="ifContentScrolls"
+    android:scrollbars="vertical">
 
-    <!-- Encabezado de Calibración -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginEnd="8dp"
-            android:src="@drawable/ic_calibrate"
-            app:tint="@color/accent_amber" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Calibración de Sensores"
-            android:textColor="@color/white"
-            android:textSize="18sp"
-            android:textStyle="bold" />
-    </LinearLayout>
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="Manten el teléfono en reposo o en tu mano firme para calibrar el punto cero de gravedad y eliminar lecturas erróneas antes de correr."
-        android:textColor="@color/text_tertiary"
-        android:textSize="12sp" />
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_marginVertical="12dp"
-        android:background="@color/glass_card_stroke" />
-
-    <!-- Estado y Progreso de Calibración -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/bg_glass_metric_tile"
-        android:gravity="center"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="20dp">
 
-        <com.google.android.material.progressindicator.CircularProgressIndicator
-            android:id="@+id/progressCalibration"
-            android:layout_width="wrap_content"
+        <!-- Encabezado de Calibración -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:indeterminate="false"
-            android:max="100"
-            android:progress="0"
-            app:indicatorColor="@color/accent_amber"
-            app:indicatorSize="64dp"
-            app:trackColor="#26FFFFFF"
-            app:trackThickness="6dp" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginEnd="8dp"
+                android:src="@drawable/ic_calibrate"
+                app:tint="@color/accent_amber" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Calibración de Sensores"
+                android:textColor="@color/white"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
         <TextView
-            android:id="@+id/tvCalibrationCountdown"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:fontFamily="monospace"
-            android:text="Listo para calibrar"
-            android:textColor="@color/accent_amber"
-            android:textSize="15sp"
-            android:textStyle="bold" />
+            android:layout_marginTop="4dp"
+            android:text="Manten el teléfono en reposo o en tu mano firme para calibrar el punto cero de gravedad y eliminar lecturas erróneas antes de correr."
+            android:textColor="@color/text_tertiary"
+            android:textSize="12sp" />
 
-        <TextView
-            android:id="@+id/tvCalibrationTelemetry"
-            android:layout_width="wrap_content"
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginVertical="12dp"
+            android:background="@color/glass_card_stroke" />
+
+        <!-- Estado y Progreso de Calibración -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:fontFamily="monospace"
-            android:text="Gravedad: 9.81 m/s² • Offset: 0.00"
-            android:textColor="@color/text_secondary"
-            android:textSize="11sp" />
+            android:background="@drawable/bg_glass_metric_tile"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:id="@+id/progressCalibration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:indeterminate="false"
+                android:max="100"
+                android:progress="0"
+                app:indicatorColor="@color/accent_amber"
+                app:indicatorSize="64dp"
+                app:trackColor="#26FFFFFF"
+                app:trackThickness="6dp" />
+
+            <TextView
+                android:id="@+id/tvCalibrationCountdown"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:fontFamily="monospace"
+                android:text="Listo para calibrar"
+                android:textColor="@color/accent_amber"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvCalibrationTelemetry"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:fontFamily="monospace"
+                android:text="Gravedad: 9.81 m/s² • Offset: 0.00"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <!-- Botones de Acción -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="end"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCancelCalibration"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="Cerrar"
+                android:textColor="@color/text_secondary" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnStartCalibration"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_glass_button_prominent_amber"
+                app:backgroundTint="@null"
+                android:paddingHorizontal="16dp"
+                android:text="Iniciar Calibración (3s)"
+                android:textColor="@color/black"
+                android:textStyle="bold"
+                app:cornerRadius="22dp" />
+        </LinearLayout>
     </LinearLayout>
-
-    <!-- Botones de Acción -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:gravity="end"
-        android:orientation="horizontal">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnCancelCalibration"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:text="Cerrar"
-            android:textColor="@color/text_secondary" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnStartCalibration"
-            android:layout_width="wrap_content"
-            android:layout_height="44dp"
-            android:background="@drawable/bg_glass_button_prominent_amber"
-            app:backgroundTint="@null"
-            android:paddingHorizontal="16dp"
-            android:text="Iniciar Calibración (3s)"
-            android:textColor="@color/black"
-            android:textStyle="bold"
-            app:cornerRadius="22dp" />
-    </LinearLayout>
-</LinearLayout>
+</androidx.core.widget.NestedScrollView>

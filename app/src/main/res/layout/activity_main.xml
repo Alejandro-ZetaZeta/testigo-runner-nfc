@@ -555,6 +555,7 @@
                                     android:textStyle="bold" />
 
                                 <TextView
+                                    android:id="@+id/tvDistanceUnit"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_marginStart="4dp"
@@ -767,7 +768,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
-                                android:text="Emisión HCE NFC Activa • Listo"
+                                android:text="Modo 100% Automático en Segundo Plano"
                                 android:textColor="@color/accent_amber"
                                 android:textSize="12sp" />
                         </LinearLayout>
@@ -786,27 +787,9 @@
                         android:gravity="center_vertical"
                         android:paddingHorizontal="10dp"
                         android:paddingVertical="7dp"
-                        android:text="Sistema: Servicio APDU NFC ISO-DEP inicializado"
+                        android:text="Sistema: NFC automático activo en segundo plano"
                         android:textColor="@color/text_tertiary"
                         android:textSize="11sp" />
-
-                    <!-- Botón para Alternar Escáner (Cyan Liquid Glass Button) -->
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnToggleNfcScan"
-                        android:layout_width="match_parent"
-                        android:layout_height="48dp"
-                        android:layout_marginTop="10dp"
-                        android:background="@drawable/bg_glass_button_outlined_cyan"
-                        app:backgroundTint="@null"
-                        android:letterSpacing="0.04"
-                        android:text="Alternar Lector NFC (Modo Escaneo)"
-                        android:textColor="@color/accent_cyan"
-                        android:textSize="13sp"
-                        android:textStyle="bold"
-                        app:cornerRadius="24dp"
-                        app:icon="@drawable/ic_radar"
-                        app:iconGravity="textStart"
-                        app:iconTint="@color/accent_cyan" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
