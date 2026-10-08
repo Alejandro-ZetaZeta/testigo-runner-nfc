@@ -108,6 +108,15 @@ class RelayBatonReader(private val activity: Activity) : NfcAdapter.ReaderCallba
 
     override fun onTagDiscovered(tag: Tag?) {
         if (tag == null) return
+
+        // Si el traspaso acaba de ocurrir (periodo de enfriamiento de 5s), ignorar lecturas
+        // para dar tiempo a los corredores de separarse tras sentir la vibración
+        if (BatonManager.isHandoffInCooldown()) {
+            val remMs = BatonManager.getRemainingCooldownMs()
+            Log.i(TAG, "Tag detectado ignorado por enfriamiento de separación ($remMs ms restantes)")
+            return
+        }
+
         val tagIdHex = tag.id?.toHexString() ?: "DESCONOCIDO"
         Log.i(TAG, "¡Contacto NFC detectado! ID: $tagIdHex")
 
@@ -140,6 +149,12 @@ class RelayBatonReader(private val activity: Activity) : NfcAdapter.ReaderCallba
 
             Log.i(TAG, "Conexión APDU establecida con éxito con dispositivo remoto")
 
+            // Re-verificar cooldown antes de transferir
+            if (BatonManager.isHandoffInCooldown()) {
+                Log.w(TAG, "Intercambio APDU cancelado: Entró en periodo de enfriamiento")
+                return
+            }
+
             // 2. Intercambio de protocolo APDU bidireccional
             if (BatonManager.isCarryingBaton.value) {
                 passBatonToTarget(isoDep)
@@ -162,6 +177,11 @@ class RelayBatonReader(private val activity: Activity) : NfcAdapter.ReaderCallba
     }
 
     private fun handleProximityTapHandoff(tagIdHex: String) {
+        if (BatonManager.isHandoffInCooldown()) {
+            Log.i(TAG, "handleProximityTapHandoff ignorado: Enfriamiento de separación activo")
+            return
+        }
+
         val current = BatonManager.currentBaton.value
         val isCarrying = BatonManager.isCarryingBaton.value
 
@@ -174,8 +194,10 @@ class RelayBatonReader(private val activity: Activity) : NfcAdapter.ReaderCallba
                     timestampMs = System.currentTimeMillis(),
                     signatureToken = "SIG-TAP-${tagIdHex.take(6)}-$nextLeg"
                 )
-                BatonManager.onBatonTransferredOut("Contacto NFC con dispositivo ($tagIdHex)")
-                BatonManager.updateBaton(updatedBaton, carrying = false)
+                val sent = BatonManager.onBatonTransferredOut("Contacto NFC con dispositivo ($tagIdHex)")
+                if (sent) {
+                    BatonManager.updateBaton(updatedBaton, carrying = false)
+                }
             } else if (current != null) {
                 val nextLeg = current.legIndex
                 val updatedBaton = current.copy(
@@ -189,6 +211,8 @@ class RelayBatonReader(private val activity: Activity) : NfcAdapter.ReaderCallba
     }
 
     private fun fetchBatonFromTarget(isoDep: IsoDep) {
+        if (BatonManager.isHandoffInCooldown()) return
+
         val getCommand = ApduConstants.buildGetBatonApdu()
         val response = isoDep.transceive(getCommand)
 
@@ -221,6 +245,8 @@ class RelayBatonReader(private val activity: Activity) : NfcAdapter.ReaderCallba
     }
 
     private fun passBatonToTarget(isoDep: IsoDep) {
+        if (BatonManager.isHandoffInCooldown()) return
+
         val baton = BatonManager.currentBaton.value ?: return
         val payloadBytes = baton.toJsonString().toByteArray(StandardCharsets.UTF_8)
         val passCommand = ApduConstants.buildPassBatonApdu(payloadBytes)

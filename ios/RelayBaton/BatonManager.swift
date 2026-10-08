@@ -32,6 +32,9 @@ enum HandoffEvent: Identifiable {
 /// Coordinador central del estado de la carrera de relevos en iOS.
 @MainActor
 class BatonManager: ObservableObject {
+    // Constante de tiempo de enfriamiento anti-rebote (5 segundos de separación física obligatoria)
+    static let handoffCooldownDuration: TimeInterval = 5.0
+
     @Published var currentBaton: BatonData? = BatonData(
         raceId: "CARRERA-2026-ALFA",
         teamId: "EQUIPO-ALFA",
@@ -45,16 +48,70 @@ class BatonManager: ObservableObject {
     @Published var currentLegIndex: Int = 1
     @Published var statusMessage: String = "Listo para la Carrera"
 
+    @Published var lastHandoffDate: Date? = nil
+    @Published var cooldownRemainingSeconds: Int = 0
+    private var cooldownTimer: Timer? = nil
+
+    /// Comprueba si el sistema está en el periodo de enfriamiento de 5 segundos tras un traspaso.
+    var isHandoffInCooldown: Bool {
+        guard let last = lastHandoffDate else { return false }
+        return Date().timeIntervalSince(last) < Self.handoffCooldownDuration
+    }
+
+    /// Retorna los segundos restantes del periodo de enfriamiento de separación.
+    var remainingCooldownSeconds: TimeInterval {
+        guard let last = lastHandoffDate else { return 0 }
+        let remaining = Self.handoffCooldownDuration - Date().timeIntervalSince(last)
+        return max(0, remaining)
+    }
+
     // Instancia singleton
     static let shared = BatonManager()
 
     init() {}
+
+    func resetCooldown() {
+        cooldownTimer?.invalidate()
+        cooldownTimer = nil
+        lastHandoffDate = nil
+        cooldownRemainingSeconds = 0
+    }
+
+    private func startCooldownCountdown() {
+        cooldownTimer?.invalidate()
+        cooldownRemainingSeconds = Int(ceil(Self.handoffCooldownDuration))
+
+        cooldownTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] timer in
+            guard let self = self else {
+                timer.invalidate()
+                return
+            }
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                guard let last = self.lastHandoffDate else {
+                    timer.invalidate()
+                    self.cooldownTimer = nil
+                    self.cooldownRemainingSeconds = 0
+                    return
+                }
+                let remaining = Self.handoffCooldownDuration - Date().timeIntervalSince(last)
+                if remaining <= 0 {
+                    timer.invalidate()
+                    self.cooldownTimer = nil
+                    self.cooldownRemainingSeconds = 0
+                } else {
+                    self.cooldownRemainingSeconds = Int(ceil(remaining))
+                }
+            }
+        }
+    }
 
     /// Sincronización Pre-Inicio del dispositivo en el grupo de relevos.
     /// La portación inicial se determina estrictamente por la etapa:
     /// - Etapa 1 (Corredor Inicial) -> isCarryingBaton = true
     /// - Etapas 2+ (Relevistas en Espera) -> isCarryingBaton = false (Modo Standby bloqueado)
     func setupGroupRunner(raceId: String, teamId: String, runnerName: String, legIndex: Int) {
+        resetCooldown()
         let isInitial = (legIndex == 1)
         let initialToken = isInitial
             ? "SIG-START-LEG1-\(Int(Date().timeIntervalSince1970) % 10000)"
@@ -100,23 +157,32 @@ class BatonManager: ObservableObject {
         statusMessage = carrying ? "Testigo activo (Etapa \(baton.legIndex))" : "En espera de relevo NFC (Etapa \(baton.legIndex))"
     }
 
-    func onBatonTransferredOut(info: String = "") {
-        guard let baton = currentBaton else { return }
-        guard isCarryingBaton else { return } // Evitar eventos duplicados
+    @discardableResult
+    func onBatonTransferredOut(info: String = "") -> Bool {
+        guard let baton = currentBaton else { return false }
+        guard isCarryingBaton else { return false } // Evitar eventos duplicados
+        if isHandoffInCooldown { return false }
+
+        lastHandoffDate = Date()
         isCarryingBaton = false
         statusMessage = "🎉 ¡Traspaso completado! Testigo transferido a la Etapa \(baton.legIndex + 1)"
         let event = HandoffEvent.batonSent(baton: baton, timestamp: Date())
         handoffHistory.insert(event, at: 0)
+        startCooldownCountdown()
+        return true
     }
 
-    func onBatonReceivedIn(incomingBaton: BatonData) {
+    @discardableResult
+    func onBatonReceivedIn(incomingBaton: BatonData) -> Bool {
+        if isHandoffInCooldown { return false }
+
         // 1. Validación estricta de ID de Carrera / Grupo
         if let current = currentBaton,
            !current.raceId.isEmpty,
            !incomingBaton.raceId.isEmpty,
            current.raceId.caseInsensitiveCompare(incomingBaton.raceId) != .orderedSame {
             onHandshakeFailed(reason: "Carrera incompatible: '\(incomingBaton.raceId)' (esperado: '\(current.raceId)')")
-            return
+            return false
         }
 
         // 2. Validación de equipo si ambos están presentes
@@ -125,12 +191,12 @@ class BatonManager: ObservableObject {
            !incomingBaton.teamId.isEmpty,
            current.teamId.caseInsensitiveCompare(incomingBaton.teamId) != .orderedSame {
             onHandshakeFailed(reason: "Equipo incompatible: '\(incomingBaton.teamId)' (esperado: '\(current.teamId)')")
-            return
+            return false
         }
 
         // 3. Si ya está portando el testigo para esta misma etapa o superior, ignorar duplicado
         if isCarryingBaton, let current = currentBaton, current.legIndex >= (incomingBaton.legIndex + 1) {
-            return
+            return false
         }
 
         let targetLeg = max(incomingBaton.legIndex + 1, currentLegIndex)
@@ -145,12 +211,15 @@ class BatonManager: ObservableObject {
             signatureToken: "SIG-RECV-LEG\(targetLeg)-\(Int(Date().timeIntervalSince1970) % 10000)"
         )
 
+        lastHandoffDate = Date()
         currentBaton = activeBaton
         currentLegIndex = targetLeg
         isCarryingBaton = true
         statusMessage = "🔥 ¡Testigo recibido! Etapa \(targetLeg) activa: ¡CORRE!"
         let event = HandoffEvent.batonReceived(baton: activeBaton, timestamp: Date())
         handoffHistory.insert(event, at: 0)
+        startCooldownCountdown()
+        return true
     }
 
     func onHandshakeFailed(reason: String) {

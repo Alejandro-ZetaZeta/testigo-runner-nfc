@@ -92,6 +92,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var timerStartTime = 0L
     private var accumulatedTimeMs = 0L
     private var timerJob: Job? = null
+    private var cooldownJob: Job? = null
 
     // Referencias de Vistas UI
     private lateinit var tvRaceId: TextView
@@ -602,10 +603,58 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             // Portador: HCE en modo escucha puro; se detiene el lector para evitar colisión RF entre teléfonos
             relayBatonReader.stopScanning()
             stopPulseAnimation()
+
+            if (BatonManager.isHandoffInCooldown()) {
+                startCooldownCountdown()
+            }
         } else {
-            // Relevista en espera: Lector NFC activado escaneando activamente al portador
-            relayBatonReader.startScanning()
-            startPulseAnimation()
+            // Relevista en espera:
+            if (BatonManager.isHandoffInCooldown()) {
+                // Durante el enfriamiento de 5 segundos, mantener el lector detenido para que los corredores se separen
+                relayBatonReader.stopScanning()
+                stopPulseAnimation()
+                startCooldownCountdown()
+            } else {
+                relayBatonReader.startScanning()
+                startPulseAnimation()
+            }
+        }
+    }
+
+    private fun startCooldownCountdown() {
+        cooldownJob?.cancel()
+        cooldownJob = lifecycleScope.launch {
+            while (isActive && BatonManager.isHandoffInCooldown()) {
+                val remMs = BatonManager.getRemainingCooldownMs()
+                val remSec = ((remMs + 999) / 1000).toInt()
+                BatonManager.setCooldownSeconds(remSec)
+
+                val isCarrying = BatonManager.isCarryingBaton.value
+                if (isCarrying) {
+                    tvNfcTitle.text = "NFC: Testigo Recibido • Separación ($remSec s)"
+                    tvNfcSubtitle.text = "⏳ ¡Sepárate de tu compañero ($remSec s)! • NFC en enfriamiento anti-rebote"
+                    tvNfcSubtitle.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.accent_green))
+                } else {
+                    tvNfcTitle.text = "NFC: Testigo Entregado • Separación ($remSec s)"
+                    tvNfcSubtitle.text = "⏳ ¡Sepárate de tu compañero ($remSec s)! • Lector en pausa de seguridad"
+                    tvNfcSubtitle.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.accent_amber))
+                }
+                delay(200L)
+            }
+
+            BatonManager.setCooldownSeconds(0)
+            val isCarrying = BatonManager.isCarryingBaton.value
+            if (!isCarrying) {
+                tvNfcTitle.text = "NFC Automático: Escaneando Testigo"
+                tvNfcSubtitle.text = "Lector NFC activo en segundo plano • El cronómetro iniciará solo"
+                tvNfcSubtitle.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.accent_amber))
+                relayBatonReader.startScanning()
+                startPulseAnimation()
+            } else {
+                tvNfcTitle.text = "NFC Automático: Emisor HCE Activo"
+                tvNfcSubtitle.text = "Emulación de tarjeta HCE en segundo plano • Acerca el dispositivo al relevista"
+                tvNfcSubtitle.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.accent_green))
+            }
         }
     }
 
@@ -695,22 +744,28 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             is HandoffEvent.BatonSent -> {
                 playSuccessTone()
                 vibrateHandoffSent()
-                tvNfcHandoffLog.text = "🎉 ¡Traspaso completado! Testigo transferido a la Etapa ${event.baton.legIndex + 1}"
+                tvNfcHandoffLog.text = "🎉 ¡Traspaso completado! Testigo entregado a Etapa ${event.baton.legIndex + 1} (Sepárense 5s)"
                 tvNfcHandoffLog.setTextColor(ContextCompat.getColor(this, R.color.status_sprint_text))
                 pauseRaceTimer()
                 tvTimerSubtext.text = "¡Etapa ${event.baton.legIndex} finalizada! Testigo entregado con éxito."
-                Toast.makeText(this, "⚡ ¡Testigo entregado con éxito!", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "⚡ ¡Testigo entregado! Sepárense durante los próximos 5 segundos.", Toast.LENGTH_LONG).show()
+                startCooldownCountdown()
             }
             is HandoffEvent.BatonReceived -> {
                 playSuccessTone()
                 vibrateBatonReceived()
-                tvNfcHandoffLog.text = "🔥 ¡Testigo recibido! Etapa ${event.baton.legIndex} activa: ¡CORRE!"
+                tvNfcHandoffLog.text = "🔥 ¡Testigo recibido! Etapa ${event.baton.legIndex} activa: ¡CORRE Y SEPÁRATE!"
                 tvNfcHandoffLog.setTextColor(ContextCompat.getColor(this, R.color.accent_green))
                 if (timerState != TimerState.RUNNING) {
                     startRaceTimer()
                 }
                 tvTimerSubtext.text = "¡Etapa ${event.baton.legIndex} en progreso! ¡Corre a la zona de relevo!"
                 Toast.makeText(this, "🔥 ¡Testigo recibido! ¡Cronómetro iniciado automáticamente!", Toast.LENGTH_LONG).show()
+                startCooldownCountdown()
+            }
+            is HandoffEvent.CooldownActive -> {
+                tvNfcHandoffLog.text = "⏳ Periodo de separación activo (${event.remainingSeconds}s restantes)"
+                tvNfcHandoffLog.setTextColor(ContextCompat.getColor(this, R.color.accent_amber))
             }
             is HandoffEvent.HandshakeError -> {
                 playTone(ToneGenerator.TONE_PROP_NACK, 250)
@@ -723,6 +778,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun triggerManualBatonHandoff() {
+        if (BatonManager.isHandoffInCooldown()) {
+            val remSec = ((BatonManager.getRemainingCooldownMs() + 999) / 1000).toInt()
+            Toast.makeText(this, "⏳ Espera $remSec s de separación antes del próximo traspaso", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         val current = BatonManager.currentBaton.value
         val isCarrying = BatonManager.isCarryingBaton.value
 
@@ -734,16 +795,20 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 timestampMs = System.currentTimeMillis(),
                 signatureToken = "SIG-ETAPA$nextLeg-${System.currentTimeMillis() % 10000}"
             )
-            BatonManager.onBatonTransferredOut("Traspaso manual por botón")
-            BatonManager.updateBaton(updatedBaton, carrying = false)
-            Toast.makeText(this, "¡Testigo pasado al Corredor $nextLeg!", Toast.LENGTH_SHORT).show()
+            val sent = BatonManager.onBatonTransferredOut("Traspaso manual por botón")
+            if (sent) {
+                BatonManager.updateBaton(updatedBaton, carrying = false)
+                Toast.makeText(this, "¡Testigo pasado al Corredor $nextLeg!", Toast.LENGTH_SHORT).show()
+            }
         } else if (current != null) {
             val updatedBaton = current.copy(
                 timestampMs = System.currentTimeMillis(),
                 signatureToken = "SIG-RECV-${System.currentTimeMillis() % 10000}"
             )
-            BatonManager.onBatonReceivedIn(updatedBaton)
-            Toast.makeText(this, "¡Testigo recibido! Iniciando etapa...", Toast.LENGTH_SHORT).show()
+            val received = BatonManager.onBatonReceivedIn(updatedBaton)
+            if (received) {
+                Toast.makeText(this, "¡Testigo recibido! Iniciando etapa...", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -1115,5 +1180,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     override fun onDestroy() {
         super.onDestroy()
         timerJob?.cancel()
+        cooldownJob?.cancel()
     }
 }

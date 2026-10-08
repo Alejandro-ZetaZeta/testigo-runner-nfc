@@ -12,13 +12,19 @@ sealed class HandoffEvent {
     data class BatonSent(val baton: BatonData, val timestamp: Long = System.currentTimeMillis()) : HandoffEvent()
     data class BatonReceived(val baton: BatonData, val timestamp: Long = System.currentTimeMillis()) : HandoffEvent()
     data class HandshakeError(val reason: String) : HandoffEvent()
+    data class CooldownActive(val remainingSeconds: Int) : HandoffEvent()
 }
 
 /**
  * Singleton que gestiona el estado activo del testigo, la sincronización de grupo
- * y los eventos de traspaso NFC 100% automáticos.
+ * y los eventos de traspaso NFC 100% automáticos con protección de enfriamiento anti-rebote (5s).
  */
 object BatonManager {
+
+    const val HANDOFF_COOLDOWN_MS = 5000L
+
+    @Volatile
+    private var lastHandoffTimestamp: Long = 0L
 
     private val _currentBaton = MutableStateFlow<BatonData?>(
         BatonData(
@@ -38,6 +44,40 @@ object BatonManager {
     private val _isCarryingBaton = MutableStateFlow(true)
     val isCarryingBaton: StateFlow<Boolean> = _isCarryingBaton.asStateFlow()
 
+    // Estado reactivo del tiempo de enfriamiento restante (en segundos)
+    private val _cooldownRemainingSeconds = MutableStateFlow(0)
+    val cooldownRemainingSeconds: StateFlow<Int> = _cooldownRemainingSeconds.asStateFlow()
+
+    /**
+     * Comprueba si el sistema está en el periodo de enfriamiento de 5 segundos tras un traspaso.
+     */
+    fun isHandoffInCooldown(now: Long = System.currentTimeMillis()): Boolean {
+        return (now - lastHandoffTimestamp) < HANDOFF_COOLDOWN_MS
+    }
+
+    /**
+     * Retorna los milisegundos restantes del periodo de enfriamiento de separación.
+     */
+    fun getRemainingCooldownMs(now: Long = System.currentTimeMillis()): Long {
+        val elapsed = now - lastHandoffTimestamp
+        return if (elapsed < HANDOFF_COOLDOWN_MS) HANDOFF_COOLDOWN_MS - elapsed else 0L
+    }
+
+    /**
+     * Reinicia el periodo de enfriamiento (usado en configuración pre-inicio o pruebas unitarias).
+     */
+    fun resetCooldown() {
+        lastHandoffTimestamp = 0L
+        _cooldownRemainingSeconds.value = 0
+    }
+
+    /**
+     * Actualiza el conteo de segundos restantes para observadores de UI.
+     */
+    fun setCooldownSeconds(seconds: Int) {
+        _cooldownRemainingSeconds.value = maxOf(0, seconds)
+    }
+
     /**
      * Sincronización Pre-Inicio del dispositivo en el grupo de relevos.
      * La portación inicial se determina estrictamente por la etapa:
@@ -45,6 +85,7 @@ object BatonManager {
      * - Etapas 2+ (Relevistas en Espera) -> isCarryingBaton = false
      */
     fun setupGroupRunner(raceId: String, teamId: String, runnerName: String, legIndex: Int) {
+        resetCooldown()
         val initialCarrying = (legIndex == 1)
         val initialToken = if (initialCarrying) {
             "SIG-START-LEG1-${System.currentTimeMillis() % 10000}"
@@ -75,27 +116,45 @@ object BatonManager {
 
     /**
      * Notificación cuando este dispositivo entrega el testigo al siguiente corredor.
+     * Retorna true si el traspaso fue aceptado, false si fue rechazado o está en enfriamiento.
      */
-    fun onBatonTransferredOut(readerInfo: String = "") {
-        if (!_isCarryingBaton.value) return // Evitar emisiones duplicadas si ya fue transferido
+    fun onBatonTransferredOut(readerInfo: String = ""): Boolean {
+        if (!_isCarryingBaton.value) return false // Evitar emisiones duplicadas si ya fue transferido
 
-        val baton = _currentBaton.value ?: return
+        val now = System.currentTimeMillis()
+        if (isHandoffInCooldown(now)) {
+            val remainingSec = ((getRemainingCooldownMs(now) + 999) / 1000).toInt()
+            _handoffEvents.tryEmit(HandoffEvent.CooldownActive(remainingSec))
+            return false
+        }
+
+        val baton = _currentBaton.value ?: return false
+        lastHandoffTimestamp = now
         _isCarryingBaton.value = false
         _handoffEvents.tryEmit(HandoffEvent.BatonSent(baton))
+        return true
     }
 
     /**
      * Notificación cuando este dispositivo recibe el testigo del corredor anterior.
      * Realiza validación estricta de grupo / carrera y actualiza la etapa.
+     * Retorna true si el testigo fue recibido con éxito, false si fue rechazado o está en enfriamiento.
      */
-    fun onBatonReceivedIn(incomingBaton: BatonData) {
+    fun onBatonReceivedIn(incomingBaton: BatonData): Boolean {
+        val now = System.currentTimeMillis()
+        if (isHandoffInCooldown(now)) {
+            val remainingSec = ((getRemainingCooldownMs(now) + 999) / 1000).toInt()
+            _handoffEvents.tryEmit(HandoffEvent.CooldownActive(remainingSec))
+            return false
+        }
+
         val current = _currentBaton.value
 
         // Validación estricta de ID de Carrera / Grupo
         if (current != null && current.raceId.isNotBlank() && incomingBaton.raceId.isNotBlank()) {
             if (!incomingBaton.raceId.equals(current.raceId, ignoreCase = true)) {
                 onHandshakeFailed("Carrera/Grupo incompatible: '${incomingBaton.raceId}' (esperado: '${current.raceId}')")
-                return
+                return false
             }
         }
 
@@ -103,13 +162,13 @@ object BatonManager {
         if (current != null && current.teamId.isNotBlank() && incomingBaton.teamId.isNotBlank()) {
             if (!incomingBaton.teamId.equals(current.teamId, ignoreCase = true)) {
                 onHandshakeFailed("Equipo incompatible: '${incomingBaton.teamId}' (esperado: '${current.teamId}')")
-                return
+                return false
             }
         }
 
         // Si ya está portando el testigo para esta misma etapa o superior, ignorar duplicado
         if (_isCarryingBaton.value && current != null && current.legIndex >= (incomingBaton.legIndex + 1)) {
-            return
+            return false
         }
 
         val targetLeg = maxOf(incomingBaton.legIndex + 1, current?.legIndex ?: (incomingBaton.legIndex + 1))
@@ -118,13 +177,15 @@ object BatonManager {
         val activeBaton = incomingBaton.copy(
             legIndex = targetLeg,
             runnerName = runnerName,
-            timestampMs = System.currentTimeMillis(),
-            signatureToken = "SIG-RECV-LEG$targetLeg-${System.currentTimeMillis() % 10000}"
+            timestampMs = now,
+            signatureToken = "SIG-RECV-LEG$targetLeg-${now % 10000}"
         )
 
+        lastHandoffTimestamp = now
         _currentBaton.value = activeBaton
         _isCarryingBaton.value = true
         _handoffEvents.tryEmit(HandoffEvent.BatonReceived(activeBaton))
+        return true
     }
 
     /**

@@ -39,7 +39,17 @@ class RelayBatonHceService : HostApduService() {
             return ApduConstants.STATUS_FAILED
         }
 
+        // Si el sistema está en el periodo de enfriamiento de 5 segundos, rechazar inmediatamente
+        // para asegurar la separación física entre corredores y evitar transferencias espurias
         val ins = commandApdu[1]
+        if (ins == ApduConstants.INS_GET_BATON || ins == ApduConstants.INS_PASS_BATON) {
+            if (BatonManager.isHandoffInCooldown()) {
+                val remMs = BatonManager.getRemainingCooldownMs()
+                Log.w(TAG, "Instrucción 0x%02X rechazada por enfriamiento de separación ($remMs ms restantes)".format(ins))
+                return ApduConstants.STATUS_FAILED
+            }
+        }
+
         return when (ins) {
             ApduConstants.INS_GET_BATON -> handleGetBatonCommand()
             ApduConstants.INS_PASS_BATON -> handlePassBatonCommand(commandApdu)
@@ -56,6 +66,11 @@ class RelayBatonHceService : HostApduService() {
      * Este dispositivo debe estar portando el testigo para entregarlo.
      */
     private fun handleGetBatonCommand(): ByteArray {
+        if (BatonManager.isHandoffInCooldown()) {
+            Log.w(TAG, "Solicitud GET_BATON rechazada: Periodo de enfriamiento de separación activo")
+            return ApduConstants.STATUS_FAILED
+        }
+
         val isCarrying = BatonManager.isCarryingBaton.value
         val baton = BatonManager.currentBaton.value
 
@@ -64,10 +79,14 @@ class RelayBatonHceService : HostApduService() {
             Log.i(TAG, "Entregando testigo a lector remoto vía GET_BATON: ${baton.toJsonString()}")
 
             // Notificar salida del testigo en BatonManager
-            BatonManager.onBatonTransferredOut("Lector remoto obtuvo el testigo vía APDU")
-
-            // Respuesta = [Bytes de Payload] + [90 00]
-            jsonPayload + ApduConstants.STATUS_SUCCESS
+            val transferred = BatonManager.onBatonTransferredOut("Lector remoto obtuvo el testigo vía APDU")
+            if (transferred) {
+                // Respuesta = [Bytes de Payload] + [90 00]
+                jsonPayload + ApduConstants.STATUS_SUCCESS
+            } else {
+                Log.w(TAG, "onBatonTransferredOut no pudo completarse (cooldown o estado)")
+                ApduConstants.STATUS_FAILED
+            }
         } else {
             Log.w(TAG, "Solicitud GET_BATON rechazada: Este dispositivo no porta el testigo activo")
             ApduConstants.STATUS_FAILED
@@ -78,6 +97,11 @@ class RelayBatonHceService : HostApduService() {
      * El dispositivo lector remoto (corredor entrante) entrega el testigo a este dispositivo (relevista en espera).
      */
     private fun handlePassBatonCommand(commandApdu: ByteArray): ByteArray {
+        if (BatonManager.isHandoffInCooldown()) {
+            Log.w(TAG, "PASS_BATON rechazado: Periodo de enfriamiento de separación activo")
+            return ApduConstants.STATUS_FAILED
+        }
+
         try {
             if (commandApdu.size < 5) return ApduConstants.STATUS_FAILED
             val lc = commandApdu[4].toInt() and 0xFF
@@ -99,9 +123,14 @@ class RelayBatonHceService : HostApduService() {
                     return ApduConstants.STATUS_FAILED
                 }
 
-                Log.i(TAG, "Testigo recibido con éxito vía PASS_BATON: $jsonString")
-                BatonManager.onBatonReceivedIn(incomingBaton)
-                ApduConstants.STATUS_SUCCESS
+                val received = BatonManager.onBatonReceivedIn(incomingBaton)
+                if (received) {
+                    Log.i(TAG, "Testigo recibido con éxito vía PASS_BATON: $jsonString")
+                    ApduConstants.STATUS_SUCCESS
+                } else {
+                    Log.w(TAG, "onBatonReceivedIn rechazado en HCE (cooldown o validación)")
+                    ApduConstants.STATUS_FAILED
+                }
             } else {
                 Log.e(TAG, "Fallo al parsear JSON del testigo entrante en HCE")
                 ApduConstants.STATUS_FAILED

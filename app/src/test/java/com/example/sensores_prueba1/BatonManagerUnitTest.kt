@@ -76,15 +76,25 @@ class BatonManagerUnitTest {
             legIndex = 1,
             runnerName = "Corredor 1"
         )
-        BatonManager.onBatonReceivedIn(validBaton)
+        val recvSuccess = BatonManager.onBatonReceivedIn(validBaton)
+        assertTrue(recvSuccess)
         val recvEvent = BatonManager.handoffEvents.replayCache.lastOrNull()
         assertTrue(recvEvent is HandoffEvent.BatonReceived)
         assertTrue(BatonManager.isCarryingBaton.value)
         assertEquals(2, BatonManager.currentBaton.value?.legIndex)
         assertEquals("Corredor 2", BatonManager.currentBaton.value?.runnerName)
 
-        // 3. Salida de testigo a la siguiente etapa
-        BatonManager.onBatonTransferredOut("Prueba de entrega a relevo 3")
+        // 3. Intento inmediato de transferencia dentro del cooldown de 5s -> DEBE SER RECHAZADO (anti-rebote)
+        assertTrue(BatonManager.isHandoffInCooldown())
+        val immediateSentSuccess = BatonManager.onBatonTransferredOut("Intento de entrega inmediato")
+        assertFalse(immediateSentSuccess)
+        assertTrue(BatonManager.isCarryingBaton.value) // El testigo se mantiene protegido
+
+        // 4. Salida de testigo a la siguiente etapa tras enfriamiento
+        BatonManager.resetCooldown()
+        assertFalse(BatonManager.isHandoffInCooldown())
+        val sentSuccess = BatonManager.onBatonTransferredOut("Prueba de entrega a relevo 3")
+        assertTrue(sentSuccess)
         val sentEvent = BatonManager.handoffEvents.replayCache.lastOrNull()
         assertTrue(sentEvent is HandoffEvent.BatonSent)
         assertFalse(BatonManager.isCarryingBaton.value)

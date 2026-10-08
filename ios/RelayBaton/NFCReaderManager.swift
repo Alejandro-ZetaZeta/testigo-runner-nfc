@@ -25,6 +25,25 @@ class NFCReaderManager: NSObject, ObservableObject, NFCTagReaderSessionDelegate 
     private var session: NFCTagReaderSession?
     private var isCarryingBaton: Bool = true
     private var outboundBaton: BatonData?
+    private var cooldownUntil: Date? = nil
+
+    var isCooldownActive: Bool {
+        guard let until = cooldownUntil else { return false }
+        return Date() < until
+    }
+
+    var remainingCooldownSeconds: TimeInterval {
+        guard let until = cooldownUntil else { return 0 }
+        return max(0, until.timeIntervalSinceNow)
+    }
+
+    func setCooldown(duration: TimeInterval = 5.0) {
+        cooldownUntil = Date().addingTimeInterval(duration)
+    }
+
+    func resetCooldown() {
+        cooldownUntil = nil
+    }
 
     // Callbacks
     var onBatonReceived: ((BatonData) -> Void)?
@@ -50,6 +69,12 @@ class NFCReaderManager: NSObject, ObservableObject, NFCTagReaderSessionDelegate 
     ) {
         guard NFCTagReaderSession.readingAvailable else {
             onError("NFC no está disponible en este dispositivo iOS o simulador.")
+            return
+        }
+
+        if isCooldownActive {
+            let remSec = Int(ceil(remainingCooldownSeconds))
+            onError("⏳ Tiempo de separación activo (\(remSec)s). Por favor sepárate de tu compañero.")
             return
         }
 
@@ -100,6 +125,12 @@ class NFCReaderManager: NSObject, ObservableObject, NFCTagReaderSessionDelegate 
     }
 
     func tagReaderSession(_ session: NFCTagReaderSession, didDetect tags: [NFCTag]) {
+        if isCooldownActive {
+            let remSec = Int(ceil(remainingCooldownSeconds))
+            session.invalidate(errorMessage: "⏳ Tiempo de separación activo (\(remSec)s). Por favor sepárense.")
+            return
+        }
+
         guard let firstTag = tags.first else {
             session.restartPolling()
             return
@@ -197,6 +228,7 @@ class NFCReaderManager: NSObject, ObservableObject, NFCTagReaderSessionDelegate 
             }
 
             if sw1 == 0x90 && sw2 == 0x00 {
+                self.setCooldown(duration: 5.0)
                 DispatchQueue.main.async {
                     self.triggerHapticSuccess()
                     self.lastStatus = "¡Testigo entregado con éxito!"
@@ -237,6 +269,7 @@ class NFCReaderManager: NSObject, ObservableObject, NFCTagReaderSessionDelegate 
             }
 
             if sw1 == 0x90 && sw2 == 0x00 {
+                self.setCooldown(duration: 5.0)
                 if let jsonString = String(data: responseData, encoding: .utf8),
                    let incomingBaton = BatonData.fromJsonString(jsonString) {
                     DispatchQueue.main.async {

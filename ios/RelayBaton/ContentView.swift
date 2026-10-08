@@ -356,8 +356,28 @@ struct ContentView: View {
 
     private var handoffActionZone: some View {
         VStack(spacing: 14) {
+            // Banner de Periodo de Separación Obligatorio (5s)
+            if batonManager.isHandoffInCooldown {
+                HStack(spacing: 8) {
+                    Image(systemName: "hourglass")
+                        .foregroundColor(.yellow)
+                    Text("TIEMPO DE SEPARACIÓN: \(batonManager.cooldownRemainingSeconds)s")
+                        .font(.system(size: 11, weight: .black, design: .monospaced))
+                        .foregroundColor(.yellow)
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 14)
+                .background(Color.yellow.opacity(0.18))
+                .cornerRadius(10)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.yellow.opacity(0.4), lineWidth: 1)
+                )
+                .transition(.scale.combined(with: .opacity))
+            }
+
             // Banner de Detección de Gesto de Extensión
-            if motionManager.handoffGestureDetected {
+            if motionManager.handoffGestureDetected && !batonManager.isHandoffInCooldown {
                 HStack {
                     Image(systemName: "hand.raised.fill")
                     Text("¡GESTO DE EXTENSIÓN DETECTADO - LISTO PARA TOCAR!")
@@ -374,15 +394,19 @@ struct ContentView: View {
             // Botón Principal de Acción NFC Automático
             Button(action: triggerNfcHandoff) {
                 HStack(spacing: 12) {
-                    Image(systemName: batonManager.isCarryingBaton ? "wave.3.forward.circle.fill" : "wave.3.backward.circle.fill")
+                    Image(systemName: batonManager.isHandoffInCooldown ? "hourglass" : (batonManager.isCarryingBaton ? "wave.3.forward.circle.fill" : "wave.3.backward.circle.fill"))
                         .font(.system(size: 28))
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(batonManager.isCarryingBaton ? "PASAR TESTIGO (NFC RELEVO)" : "RECIBIR TESTIGO (ESCANEAR NFC)")
+                        Text(batonManager.isHandoffInCooldown
+                             ? "SEPARACIÓN ACTIVA (\(batonManager.cooldownRemainingSeconds)s)"
+                             : (batonManager.isCarryingBaton ? "PASAR TESTIGO (NFC RELEVO)" : "RECIBIR TESTIGO (ESCANEAR NFC)"))
                             .font(.system(size: 15, weight: .black, design: .rounded))
-                        Text(batonManager.isCarryingBaton
-                             ? "Acerca el teléfono del relevista para transferir"
-                             : "Acerca el teléfono del portador • Inicio 100% automático")
+                        Text(batonManager.isHandoffInCooldown
+                             ? "Sepárate de tu compañero para evitar re-captura"
+                             : (batonManager.isCarryingBaton
+                                ? "Acerca el teléfono del relevista para transferir"
+                                : "Acerca el teléfono del portador • Inicio 100% automático"))
                             .font(.system(size: 10, weight: .medium))
                             .opacity(0.85)
                     }
@@ -390,20 +414,23 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
                 .background(
-                    LinearGradient(
+                    batonManager.isHandoffInCooldown
+                    ? LinearGradient(colors: [Color.gray.opacity(0.4), Color.gray.opacity(0.3)], startPoint: .leading, endPoint: .trailing)
+                    : LinearGradient(
                         colors: batonManager.isCarryingBaton ? [Color.green, Color.mint] : [Color.orange, Color.yellow],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
                 )
-                .foregroundColor(.black)
+                .foregroundColor(batonManager.isHandoffInCooldown ? Color(white: 0.7) : .black)
                 .cornerRadius(18)
                 .shadow(
-                    color: (batonManager.isCarryingBaton ? Color.green : Color.orange).opacity(0.4),
+                    color: (batonManager.isHandoffInCooldown ? Color.clear : (batonManager.isCarryingBaton ? Color.green : Color.orange)).opacity(0.4),
                     radius: 10,
                     y: 4
                 )
             }
+            .disabled(batonManager.isHandoffInCooldown)
 
             // Mensaje de Estado
             Text(batonManager.statusMessage)
